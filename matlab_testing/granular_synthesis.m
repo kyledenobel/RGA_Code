@@ -1,5 +1,5 @@
 % Attempt at granular synthesis for pitch shifting
-rho = 1;
+rho = 0;
 
 % ============= begin implementation =============  %
 
@@ -18,6 +18,10 @@ S = floor(Fs*T);
 y = zeros(numel(x),1);
 
 gamma = 1/(1+(rho*S)/(S-1));
+
+syms M
+ww = (((M/(S*rho)) * M) < (S*rho)) + (1 * (M >= (S*rho)));
+win = matlabFunction(ww);
 
 number_of_times_buffer_filled = 0;
 
@@ -41,6 +45,10 @@ for n = 0:(numel(x))-1
             end
         end
         number_of_times_buffer_filled = number_of_times_buffer_filled + 1;
+
+        offset = rand()*30 - 15;
+        ww = (((M/(S*rho)) * M) < (S*rho + offset)) + (1 * (M >= (S*rho)));
+        win = matlabFunction(ww);
     end
 
     % calculate window
@@ -48,7 +56,7 @@ for n = 0:(numel(x))-1
     if rho == 0
         w = 1;
     else
-        w = (((m/(S*rho)) * m) < (S*rho)) + (1 * (m >= (S*rho)));
+        w = win(m);
     end
 
     % do computation of y
