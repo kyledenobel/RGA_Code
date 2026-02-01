@@ -1,14 +1,12 @@
 % Attempt at granular synthesis for pitch shifting
-rho = 0.3;
+rho = 1;
 
 % ============= begin implementation =============  %
 
 % read audio sample
 [x, Fs] = audioread("G-scale.wav");
-samples = 2*Fs; % 3 seconds of samples
+samples = 6*Fs; % 3 seconds of samples
 x = x(1:samples, :);
-
-%x = sin(200*2*pi*(1:(1/Fs):5));
 
 % let S = the stride length  (grain period = 10ms)
 T = 0.02;
@@ -51,7 +49,8 @@ for n = 0:(numel(x))-1
     if rho == 0
         w = 1;
     else
-        w = myWindow(m, S, rho, offset);
+        %w = myLinearWindow(m, S, rho, offset);
+        w = mySineWindow(m, S, rho, offset);
     end
 
     % do computation of y
@@ -88,10 +87,18 @@ xlim([-2000, 2000])
 
 
 
-function v = myWindow(m, S, rho, offset)
+function v = myLinearWindow(m, S, rho, offset)
     if m < (S*rho + offset)
         v = m/(S*rho);
     else
         v = 1;
+    end
+end
+
+
+function v = mySineWindow(m, S, rho, offset)
+    v = sin(m*2*pi*(1/(2*(S*(1+rho) + offset))));
+    if v < 0
+        v = 0;
     end
 end
