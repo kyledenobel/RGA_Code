@@ -1,11 +1,11 @@
 % Attempt at granular synthesis for pitch shifting
-rho = 0;
+rho = 0.3;
 
 % ============= begin implementation =============  %
 
 % read audio sample
 [x, Fs] = audioread("G-scale.wav");
-samples = 6*Fs; % 3 seconds of samples
+samples = 2*Fs; % 3 seconds of samples
 x = x(1:samples, :);
 
 %x = sin(200*2*pi*(1:(1/Fs):5));
@@ -19,10 +19,7 @@ y = zeros(numel(x),1);
 
 gamma = 1/(1+(rho*S)/(S-1));
 
-syms M
-ww = (((M/(S*rho)) * M) < (S*rho)) + (1 * (M >= (S*rho)));
-win = matlabFunction(ww);
-
+offset = 0;
 number_of_times_buffer_filled = 0;
 
 for n = 0:(numel(x))-1
@@ -47,8 +44,6 @@ for n = 0:(numel(x))-1
         number_of_times_buffer_filled = number_of_times_buffer_filled + 1;
 
         offset = rand()*30 - 15;
-        ww = (((M/(S*rho)) * M) < (S*rho + offset)) + (1 * (M >= (S*rho)));
-        win = matlabFunction(ww);
     end
 
     % calculate window
@@ -56,7 +51,7 @@ for n = 0:(numel(x))-1
     if rho == 0
         w = 1;
     else
-        w = win(m);
+        w = myWindow(m, S, rho, offset);
     end
 
     % do computation of y
@@ -86,7 +81,17 @@ x_axis = linspace(-Fs, Fs, int32(2*Fs))./2;
 figure(2)
 subplot(2,1,1)
 plot(x_axis, abs(X))
-xlim([-500, 500])
+xlim([-2000, 2000])
 subplot(2,1,2)
 plot(x_axis, abs(Y))
-xlim([-500, 500])
+xlim([-2000, 2000])
+
+
+
+function v = myWindow(m, S, rho, offset)
+    if m < (S*rho + offset)
+        v = m/(S*rho);
+    else
+        v = 1;
+    end
+end
