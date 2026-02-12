@@ -1,5 +1,5 @@
 % Attempt at granular synthesis for pitch shifting
-rho = 1;
+rho = 0.3;
 
 % ============= begin implementation =============  %
 
