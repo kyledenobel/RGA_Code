@@ -1,7 +1,7 @@
 % Version 3 of Granular Synthesis
 
 
-rho = 0.3;
+rho = 1;
 
 
 % ========== begin implementation ========== %
@@ -10,12 +10,12 @@ rho = 0.3;
 samples = 6*Fs; % 3 seconds of samples
 x = x(1:samples, :);
 
-%{
+
 Fs = 10000;
 tt = 0:1/Fs:2;
 f = 300;
 x = cos(2*pi*tt*f);
-%}
+
 
 % let S = the stride length  (grain period = 25ms)
 T = 0.04;
@@ -28,16 +28,7 @@ y = zeros(numel(x),1);
 gamma = 1/(1+rho);
 
 % calculate window
-w = zeros(1, floor(S/gamma));
-for k = 1:floor(S/gamma)
-    if k < rho*S
-        w(k) = 1/(rho*S)*k;
-    elseif k <= S
-        w(k) = 1;
-    else
-        w(k) = (1/(S-(S/gamma)))*k - 1/(gamma-1);
-    end
-end
+w = cubicWindow(rho, gamma, S);
 
 % initialize beta
 beta = 1;
@@ -122,3 +113,75 @@ xlim([-2000, 2000])
 subplot(2,1,2)
 plot(x_axis, abs(Y))
 xlim([-2000, 2000])
+
+
+%% Window Functions
+w1 = linearWindow(rho, gamma, S);
+w2 = cubicWindow(rho, gamma, S);
+w3 = gaussianWindow(rho, gamma, S);
+figure(4)
+subplot(3, 1, 1)
+plot(w1)
+subplot(3, 1, 2)
+plot(w2)
+subplot(3, 1, 3)
+plot(w3)
+title("window")
+
+% returns a window with linear overlap segments
+function w = linearWindow(rho, gamma, S)
+    w = zeros(1, floor(S/gamma));
+    for k = 1:floor(S/gamma)
+        if k < rho*S
+            w(k) = 1/(rho*S)*k;
+        elseif k <= S
+            w(k) = 1;
+        else
+            w(k) = (1/(S-(S/gamma)))*k - 1/(gamma-1);
+        end
+    end
+end
+
+
+% returns a window with cubic overlap segments
+function w = cubicWindow(rho, gamma, S)
+    % constants for first part of cubic
+    a = -2/((S*rho-1)*(S^2 * rho^2 - 2*S*rho + 1));
+    b = (S*rho + 1)*3/((S*rho-1)*(S^2 * rho^2 - 2*S*rho + 1));
+    c = -6*S*rho/((S*rho-1)*(S^2 * rho^2 - 2*S*rho + 1));
+    d = (3*S*rho - 1)/(S^3 * rho^3 - 3*S^2 * rho^2 + 3*S*rho - 1);
+
+    % constants for second part of cubic
+    aa = (-2*gamma^3)/(S^3 * (gamma-1)*(gamma^2-2*gamma+1));
+    bb = (gamma^3 + gamma^2)*3/(S^2 * (gamma-1)*(gamma^2-2*gamma+1));
+    cc = (-6*gamma^2)/(S*(gamma-1)*(gamma^2-2*gamma+1));
+    dd = (3*gamma - 1)/(gamma^3 - 3*gamma^2 + 3*gamma - 1);
+
+    % calculate cubic
+    w = zeros(1, floor(S/gamma));
+    for k = 1:floor(S/gamma)
+        if k < rho*S
+            w(k) = a*k^3 + b*k^2 + c*k + d;
+        elseif k <= S
+            w(k) = 1;
+        else
+            w(k) = aa*k^3 + bb*k^2 + cc*k + dd;
+        end
+    end
+end
+
+
+
+% returns a window with gaussian overlap segments
+function w = gaussianWindow(rho, gamma, S)
+    w = zeros(1, floor(S/gamma));
+    for k = 1:floor(S/gamma)
+        if k < rho*S
+            w(k) = exp(-pi*(k-rho*S)^2 / (rho*S)^2);
+        elseif k <= S
+            w(k) = 1;
+        else
+            w(k) = exp(-pi*(k-S)^2 / (rho*S)^2);
+        end
+    end
+end
