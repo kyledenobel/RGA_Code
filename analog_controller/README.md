@@ -18,5 +18,12 @@
 To confirm the setup, run
 `make verify`
 
-# Compiling Instructions
-
+# Makefile Commands
+`make help`
+- shows a list of available commands
+`make verify`
+- attempts to run version check on sdcc and list commands of STVP_CmdLine. This should run without failing
+`make build`
+- builds the hex file
+`make flash`
+- flashes the hex file to the target
