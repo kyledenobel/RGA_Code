@@ -1,0 +1,18 @@
+----------------------------------------------------------
+new log session
+date:				02/14/26
+time:				23:07:02
+----------------------------------------------------------
+STVP_CmdLine version 1.6
+
+Verbose ON
+Log activity ON
+Display Progress OFF
+Message box warning if protect option byte ON
+Loop mode ON
+Erase device OFF
+Blank check device OFF
+Verify device ON
+
+Configuration:
+BoardName=ST-LINK ST-LINK_ID=0 Device=STM8L15xC6 Port=USB ProgMode=SWIM
