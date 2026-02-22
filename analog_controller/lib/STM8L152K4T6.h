@@ -734,7 +734,370 @@ typedef struct {
 #define CLOCK_REGCSR_EEREADY            (CLOCK_REGCSR_EEREADY_MASK << CLOCK_REGCSR_EEREADY_OFFSET)
 
 /* ================ RI ================= */
+// ICR1
+#define RI_ICR1_IC2CS0_OFFSET           0
+#define RI_ICR1_IC2CS0_MASK             0x01
+#define RI_ICR1_IC2CS0                  (RI_ICR1_IC2CS0_MASK << RI_ICR1_IC2CS0_OFFSET)
+#define RI_ICR1_IC2CS1_OFFSET           1
+#define RI_ICR1_IC2CS1_MASK             0x01
+#define RI_ICR1_IC2CS1                  (RI_ICR1_IC2CS1_MASK << RI_ICR1_IC2CS1_OFFSET)
+#define RI_ICR1_IC2CS2_OFFSET           2
+#define RI_ICR1_IC2CS2_MASK             0x01
+#define RI_ICR1_IC2CS2                  (RI_ICR1_IC2CS2_MASK << RI_ICR1_IC2CS2_OFFSET)
+#define RI_ICR1_IC2CS3_OFFSET           3
+#define RI_ICR1_IC2CS3_MASK             0x01
+#define RI_ICR1_IC2CS3                  (RI_ICR1_IC2CS3_MASK << RI_ICR1_IC2CS3_OFFSET)
+#define RI_ICR1_IC2CS4_OFFSET           4
+#define RI_ICR1_IC2CS4_MASK             0x01
+#define RI_ICR1_IC2CS4                  (RI_ICR1_IC2CS4_MASK << RI_ICR1_IC2CS4_OFFSET)
+// ICR2
+#define RI_ICR2_IC2CS0_OFFSET           0
+#define RI_ICR2_IC2CS0_MASK             0x01
+#define RI_ICR2_IC2CS0                  (RI_ICR2_IC2CS0_MASK << RI_ICR2_IC2CS0_OFFSET)
+#define RI_ICR2_IC2CS1_OFFSET           1
+#define RI_ICR2_IC2CS1_MASK             0x01
+#define RI_ICR2_IC2CS1                  (RI_ICR2_IC2CS1_MASK << RI_ICR2_IC2CS1_OFFSET)
+#define RI_ICR2_IC2CS2_OFFSET           2
+#define RI_ICR2_IC2CS2_MASK             0x01
+#define RI_ICR2_IC2CS2                  (RI_ICR2_IC2CS2_MASK << RI_ICR2_IC2CS2_OFFSET)
+#define RI_ICR2_IC2CS3_OFFSET           3
+#define RI_ICR2_IC2CS3_MASK             0x01
+#define RI_ICR2_IC2CS3                  (RI_ICR2_IC2CS3_MASK << RI_ICR2_IC2CS3_OFFSET)
+#define RI_ICR2_IC2CS4_OFFSET           4
+#define RI_ICR2_IC2CS4_MASK             0x01
+#define RI_ICR2_IC2CS4                  (RI_ICR2_IC2CS4_MASK << RI_ICR2_IC2CS4_OFFSET)
+// IOIR1
+#define RI_IOIR1_CH1I_OFFSET            0
+#define RI_IOIR1_CH1I_MASK              0x01
+#define RI_IOIR1_CH1I                   (RI_IOIR1_CH1I_MASK << RI_IOIR1_CH1I_OFFSET)
+#define RI_IOIR1_CH4I_OFFSET            1
+#define RI_IOIR1_CH4I_MASK              0x01
+#define RI_IOIR1_CH4I                   (RI_IOIR1_CH4I_MASK << RI_IOIR1_CH4I_OFFSET)
+#define RI_IOIR1_CH7I_OFFSET            2
+#define RI_IOIR1_CH7I_MASK              0x01
+#define RI_IOIR1_CH7I                   (RI_IOIR1_CH7I_MASK << RI_IOIR1_CH7I_OFFSET)
+#define RI_IOIR1_CH10I_OFFSET           3
+#define RI_IOIR1_CH10I_MASK             0x01
+#define RI_IOIR1_CH10I                  (RI_IOIR1_CH10I_MASK << RI_IOIR1_CH10I_OFFSET)
+#define RI_IOIR1_CH13I_OFFSET           4
+#define RI_IOIR1_CH13I_MASK             0x01
+#define RI_IOIR1_CH13I                  (RI_IOIR1_CH13I_MASK << RI_IOIR1_CH13I_OFFSET)
+#define RI_IOIR1_CH16I_OFFSET           5
+#define RI_IOIR1_CH16I_MASK             0x01
+#define RI_IOIR1_CH16I                  (RI_IOIR1_CH16I_MASK << RI_IOIR1_CH16I_OFFSET)
+#define RI_IOIR1_CH19I_OFFSET           6
+#define RI_IOIR1_CH19I_MASK             0x01
+#define RI_IOIR1_CH19I                  (RI_IOIR1_CH19I_MASK << RI_IOIR1_CH19I_OFFSET)
+#define RI_IOIR1_CH22I_OFFSET           7
+#define RI_IOIR1_CH22I_MASK             0x01
+#define RI_IOIR1_CH22I                  (RI_IOIR1_CH22I_MASK << RI_IOIR1_CH22I_OFFSET)
+// IOIR2
+#define RI_IOIR2_CH2I_OFFSET            0
+#define RI_IOIR2_CH2I_MASK              0x01
+#define RI_IOIR2_CH2I                   (RI_IOIR2_CH2I_MASK << RI_IOIR2_CH2I_OFFSET)
+#define RI_IOIR2_CH5I_OFFSET            1
+#define RI_IOIR2_CH5I_MASK              0x01
+#define RI_IOIR2_CH5I                   (RI_IOIR2_CH5I_MASK << RI_IOIR2_CH5I_OFFSET)
+#define RI_IOIR2_CH8I_OFFSET            2
+#define RI_IOIR2_CH8I_MASK              0x01
+#define RI_IOIR2_CH8I                   (RI_IOIR2_CH8I_MASK << RI_IOIR2_CH8I_OFFSET)
+#define RI_IOIR2_CH11I_OFFSET           3
+#define RI_IOIR2_CH11I_MASK             0x01
+#define RI_IOIR2_CH11I                  (RI_IOIR2_CH11I_MASK << RI_IOIR2_CH11I_OFFSET)
+#define RI_IOIR2_CH14I_OFFSET           4
+#define RI_IOIR2_CH14I_MASK             0x01
+#define RI_IOIR2_CH14I                  (RI_IOIR2_CH14I_MASK << RI_IOIR2_CH14I_OFFSET)
+#define RI_IOIR2_CH17I_OFFSET           5
+#define RI_IOIR2_CH17I_MASK             0x01
+#define RI_IOIR2_CH17I                  (RI_IOIR2_CH17I_MASK << RI_IOIR2_CH17I_OFFSET)
+#define RI_IOIR2_CH20I_OFFSET           6
+#define RI_IOIR2_CH20I_MASK             0x01
+#define RI_IOIR2_CH20I                  (RI_IOIR2_CH20I_MASK << RI_IOIR2_CH20I_OFFSET)
+#define RI_IOIR2_CH23I_OFFSET           7
+#define RI_IOIR2_CH23I_MASK             0x01
+#define RI_IOIR2_CH23I                  (RI_IOIR2_CH23I_MASK << RI_IOIR2_CH23I_OFFSET)
+// IOIR3
+#define RI_IOIR3_CH3I_OFFSET            0
+#define RI_IOIR3_CH3I_MASK              0x01
+#define RI_IOIR3_CH3I                   (RI_IOIR3_CH3I_MASK << RI_IOIR3_CH3I_OFFSET)
+#define RI_IOIR3_CH6I_OFFSET            1
+#define RI_IOIR3_CH6I_MASK              0x01
+#define RI_IOIR3_CH6I                   (RI_IOIR3_CH6I_MASK << RI_IOIR3_CH6I_OFFSET)
+#define RI_IOIR3_CH9I_OFFSET            2
+#define RI_IOIR3_CH9I_MASK              0x01
+#define RI_IOIR3_CH9I                   (RI_IOIR3_CH9I_MASK << RI_IOIR3_CH9I_OFFSET)
+#define RI_IOIR3_CH12I_OFFSET           3
+#define RI_IOIR3_CH12I_MASK             0x01
+#define RI_IOIR3_CH12I                  (RI_IOIR3_CH12I_MASK << RI_IOIR3_CH12I_OFFSET)
+#define RI_IOIR3_CH15I_OFFSET           4
+#define RI_IOIR3_CH15I_MASK             0x01
+#define RI_IOIR3_CH15I                  (RI_IOIR3_CH15I_MASK << RI_IOIR3_CH15I_OFFSET)
+#define RI_IOIR3_CH18I_OFFSET           5
+#define RI_IOIR3_CH18I_MASK             0x01
+#define RI_IOIR3_CH18I                  (RI_IOIR3_CH18I_MASK << RI_IOIR3_CH18I_OFFSET)
+#define RI_IOIR3_CH21I_OFFSET           6
+#define RI_IOIR3_CH21I_MASK             0x01
+#define RI_IOIR3_CH21I                  (RI_IOIR3_CH21I_MASK << RI_IOIR3_CH21I_OFFSET)
+#define RI_IOIR3_CH24I_OFFSET           7
+#define RI_IOIR3_CH24I_MASK             0x01
+#define RI_IOIR3_CH24I                  (RI_IOIR3_CH24I_MASK << RI_IOIR3_CH24I_OFFSET)
+// IOCMR1
+#define RI_IOCMR1_CH1M_OFFSET            0
+#define RI_IOCMR1_CH1M_MASK              0x01
+#define RI_IOCMR1_CH1M                   (RI_IOCMR1_CH1M_MASK << RI_IOCMR1_CH1M_OFFSET)
+#define RI_IOCMR1_CH4M_OFFSET            1
+#define RI_IOCMR1_CH4M_MASK              0x01
+#define RI_IOCMR1_CH4M                   (RI_IOCMR1_CH4M_MASK << RI_IOCMR1_CH4M_OFFSET)
+#define RI_IOCMR1_CH7M_OFFSET            2
+#define RI_IOCMR1_CH7M_MASK              0x01
+#define RI_IOCMR1_CH7M                   (RI_IOCMR1_CH7M_MASK << RI_IOCMR1_CH7M_OFFSET)
+#define RI_IOCMR1_CH10M_OFFSET           3
+#define RI_IOCMR1_CH10M_MASK             0x01
+#define RI_IOCMR1_CH10M                  (RI_IOCMR1_CH10M_MASK << RI_IOCMR1_CH10M_OFFSET)
+#define RI_IOCMR1_CH13M_OFFSET           4
+#define RI_IOCMR1_CH13M_MASK             0x01
+#define RI_IOCMR1_CH13M                  (RI_IOCMR1_CH13M_MASK << RI_IOCMR1_CH13M_OFFSET)
+#define RI_IOCMR1_CH16M_OFFSET           5
+#define RI_IOCMR1_CH16M_MASK             0x01
+#define RI_IOCMR1_CH16M                  (RI_IOCMR1_CH16M_MASK << RI_IOCMR1_CH16M_OFFSET)
+#define RI_IOCMR1_CH19M_OFFSET           6
+#define RI_IOCMR1_CH19M_MASK             0x01
+#define RI_IOCMR1_CH19M                  (RI_IOCMR1_CH19M_MASK << RI_IOCMR1_CH19M_OFFSET)
+#define RI_IOCMR1_CH22M_OFFSET           7
+#define RI_IOCMR1_CH22M_MASK             0x01
+#define RI_IOCMR1_CH22M                  (RI_IOCMR1_CH22M_MASK << RI_IOCMR1_CH22M_OFFSET)
+// IOCMR2
+#define RI_IOCMR2_CH2M_OFFSET            0
+#define RI_IOCMR2_CH2M_MASK              0x01
+#define RI_IOCMR2_CH2M                   (RI_IOCMR2_CH2M_MASK << RI_IOCMR2_CH2M_OFFSET)
+#define RI_IOCMR2_CH5M_OFFSET            1
+#define RI_IOCMR2_CH5M_MASK              0x01
+#define RI_IOCMR2_CH5M                   (RI_IOCMR2_CH5M_MASK << RI_IOCMR2_CH5M_OFFSET)
+#define RI_IOCMR2_CH8M_OFFSET            2
+#define RI_IOCMR2_CH8M_MASK              0x01
+#define RI_IOCMR2_CH8M                   (RI_IOCMR2_CH8M_MASK << RI_IOCMR2_CH8M_OFFSET)
+#define RI_IOCMR2_CH11M_OFFSET           3
+#define RI_IOCMR2_CH11M_MASK             0x01
+#define RI_IOCMR2_CH11M                  (RI_IOCMR2_CH11M_MASK << RI_IOCMR2_CH11M_OFFSET)
+#define RI_IOCMR2_CH14M_OFFSET           4
+#define RI_IOCMR2_CH14M_MASK             0x01
+#define RI_IOCMR2_CH14M                  (RI_IOCMR2_CH14M_MASK << RI_IOCMR2_CH14M_OFFSET)
+#define RI_IOCMR2_CH17M_OFFSET           5
+#define RI_IOCMR2_CH17M_MASK             0x01
+#define RI_IOCMR2_CH17M                  (RI_IOCMR2_CH17M_MASK << RI_IOCMR2_CH17M_OFFSET)
+#define RI_IOCMR2_CH20M_OFFSET           6
+#define RI_IOCMR2_CH20M_MASK             0x01
+#define RI_IOCMR2_CH20M                  (RI_IOCMR2_CH20M_MASK << RI_IOCMR2_CH20M_OFFSET)
+#define RI_IOCMR2_CH23M_OFFSET           7
+#define RI_IOCMR2_CH23M_MASK             0x01
+#define RI_IOCMR2_CH23M                  (RI_IOCMR2_CH23M_MASK << RI_IOCMR2_CH23M_OFFSET)
+// IOCMR3
+#define RI_IOCMR3_CH3M_OFFSET            0
+#define RI_IOCMR3_CH3M_MASK              0x01
+#define RI_IOCMR3_CH3M                   (RI_IOCMR3_CH3M_MASK << RI_IOCMR3_CH3M_OFFSET)
+#define RI_IOCMR3_CH6M_OFFSET            1
+#define RI_IOCMR3_CH6M_MASK              0x01
+#define RI_IOCMR3_CH6M                   (RI_IOCMR3_CH6M_MASK << RI_IOCMR3_CH6M_OFFSET)
+#define RI_IOCMR3_CH9M_OFFSET            2
+#define RI_IOCMR3_CH9M_MASK              0x01
+#define RI_IOCMR3_CH9M                   (RI_IOCMR3_CH9M_MASK << RI_IOCMR3_CH9M_OFFSET)
+#define RI_IOCMR3_CH12M_OFFSET           3
+#define RI_IOCMR3_CH12M_MASK             0x01
+#define RI_IOCMR3_CH12M                  (RI_IOCMR3_CH12M_MASK << RI_IOCMR3_CH12M_OFFSET)
+#define RI_IOCMR3_CH15M_OFFSET           4
+#define RI_IOCMR3_CH15M_MASK             0x01
+#define RI_IOCMR3_CH15M                  (RI_IOCMR3_CH15M_MASK << RI_IOCMR3_CH15M_OFFSET)
+#define RI_IOCMR3_CH18M_OFFSET           5
+#define RI_IOCMR3_CH18M_MASK             0x01
+#define RI_IOCMR3_CH18M                  (RI_IOCMR3_CH18M_MASK << RI_IOCMR3_CH18M_OFFSET)
+#define RI_IOCMR3_CH21M_OFFSET           6
+#define RI_IOCMR3_CH21M_MASK             0x01
+#define RI_IOCMR3_CH21M                  (RI_IOCMR3_CH21M_MASK << RI_IOCMR3_CH21M_OFFSET)
+#define RI_IOCMR3_CH24M_OFFSET           7
+#define RI_IOCMR3_CH24M_MASK             0x01
+#define RI_IOCMR3_CH24M                  (RI_IOCMR3_CH24M_MASK << RI_IOCMR3_CH24M_OFFSET)
+// IOSR1
+#define RI_IOSR1_CH1E_OFFSET             0
+#define RI_IOSR1_CH1E_MASK               0x01
+#define RI_IOSR1_CH1E                    (RI_IOSR1_CH1E_MASK << RI_IOSR1_CH1E_OFFSET)
+#define RI_IOSR1_CH4E_OFFSET             1
+#define RI_IOSR1_CH4E_MASK               0x01
+#define RI_IOSR1_CH4E                    (RI_IOSR1_CH4E_MASK << RI_IOSR1_CH4E_OFFSET)
+#define RI_IOSR1_CH7E_OFFSET             2
+#define RI_IOSR1_CH7E_MASK               0x01
+#define RI_IOSR1_CH7E                    (RI_IOSR1_CH7E_MASK << RI_IOSR1_CH7E_OFFSET)
+#define RI_IOSR1_CH10E_OFFSET            3
+#define RI_IOSR1_CH10E_MASK              0x01
+#define RI_IOSR1_CH10E                   (RI_IOSR1_CH10E_MASK << RI_IOSR1_CH10E_OFFSET)
+#define RI_IOSR1_CH13E_OFFSET            4
+#define RI_IOSR1_CH13E_MASK              0x01
+#define RI_IOSR1_CH13E                   (RI_IOSR1_CH13E_MASK << RI_IOSR1_CH13E_OFFSET)
+#define RI_IOSR1_CH16E_OFFSET            5
+#define RI_IOSR1_CH16E_MASK              0x01
+#define RI_IOSR1_CH16E                   (RI_IOSR1_CH16E_MASK << RI_IOSR1_CH16E_OFFSET)
+#define RI_IOSR1_CH19E_OFFSET            6
+#define RI_IOSR1_CH19E_MASK              0x01
+#define RI_IOSR1_CH19E                   (RI_IOSR1_CH19E_MASK << RI_IOSR1_CH19E_OFFSET)
+#define RI_IOSR1_CH22E_OFFSET            7
+#define RI_IOSR1_CH22E_MASK              0x01
+#define RI_IOSR1_CH22E                   (RI_IOSR1_CH22E_MASK << RI_IOSR1_CH22E_OFFSET)
+// IOSR2
+#define RI_IOSR2_CH2E_OFFSET             0
+#define RI_IOSR2_CH2E_MASK               0x01
+#define RI_IOSR2_CH2E                    (RI_IOSR2_CH2E_MASK << RI_IOSR2_CH2E_OFFSET)
+#define RI_IOSR2_CH5E_OFFSET             1
+#define RI_IOSR2_CH5E_MASK               0x01
+#define RI_IOSR2_CH5E                    (RI_IOSR2_CH5E_MASK << RI_IOSR2_CH5E_OFFSET)
+#define RI_IOSR2_CH8E_OFFSET             2
+#define RI_IOSR2_CH8E_MASK               0x01
+#define RI_IOSR2_CH8E                    (RI_IOSR2_CH8E_MASK << RI_IOSR2_CH8E_OFFSET)
+#define RI_IOSR2_CH11E_OFFSET            3
+#define RI_IOSR2_CH11E_MASK              0x01
+#define RI_IOSR2_CH11E                   (RI_IOSR2_CH11E_MASK << RI_IOSR2_CH11E_OFFSET)
+#define RI_IOSR2_CH14E_OFFSET            4
+#define RI_IOSR2_CH14E_MASK              0x01
+#define RI_IOSR2_CH14E                   (RI_IOSR2_CH14E_MASK << RI_IOSR2_CH14E_OFFSET)
+#define RI_IOSR2_CH17E_OFFSET            5
+#define RI_IOSR2_CH17E_MASK              0x01
+#define RI_IOSR2_CH17E                   (RI_IOSR2_CH17E_MASK << RI_IOSR2_CH17E_OFFSET)
+#define RI_IOSR2_CH20E_OFFSET            6
+#define RI_IOSR2_CH20E_MASK              0x01
+#define RI_IOSR2_CH20E                   (RI_IOSR2_CH20E_MASK << RI_IOSR2_CH20E_OFFSET)
+#define RI_IOSR2_CH23E_OFFSET            7
+#define RI_IOSR2_CH23E_MASK              0x01
+#define RI_IOSR2_CH23E                   (RI_IOSR2_CH23E_MASK << RI_IOSR2_CH23E_OFFSET)
+// IOSR3
+#define RI_IOSR3_CH3E_OFFSET             0
+#define RI_IOSR3_CH3E_MASK               0x01
+#define RI_IOSR3_CH3E                    (RI_IOSR3_CH3E_MASK << RI_IOSR3_CH3E_OFFSET)
+#define RI_IOSR3_CH6E_OFFSET             1
+#define RI_IOSR3_CH6E_MASK               0x01
+#define RI_IOSR3_CH6E                    (RI_IOSR3_CH6E_MASK << RI_IOSR3_CH6E_OFFSET)
+#define RI_IOSR3_CH9E_OFFSET             2
+#define RI_IOSR3_CH9E_MASK               0x01
+#define RI_IOSR3_CH9E                    (RI_IOSR3_CH9E_MASK << RI_IOSR3_CH9E_OFFSET)
+#define RI_IOSR3_CH12E_OFFSET            3
+#define RI_IOSR3_CH12E_MASK              0x01
+#define RI_IOSR3_CH12E                   (RI_IOSR3_CH12E_MASK << RI_IOSR3_CH12E_OFFSET)
+#define RI_IOSR3_CH15E_OFFSET            4
+#define RI_IOSR3_CH15E_MASK              0x01
+#define RI_IOSR3_CH15E                   (RI_IOSR3_CH15E_MASK << RI_IOSR3_CH15E_OFFSET)
+#define RI_IOSR3_CH18E_OFFSET            5
+#define RI_IOSR3_CH18E_MASK              0x01
+#define RI_IOSR3_CH18E                   (RI_IOSR3_CH18E_MASK << RI_IOSR3_CH18E_OFFSET)
+#define RI_IOSR3_CH21E_OFFSET            6
+#define RI_IOSR3_CH21E_MASK              0x01
+#define RI_IOSR3_CH21E                   (RI_IOSR3_CH21E_MASK << RI_IOSR3_CH21E_OFFSET)
+#define RI_IOSR3_CH24E_OFFSET            7
+#define RI_IOSR3_CH24E_MASK              0x01
+#define RI_IOSR3_CH24E                   (RI_IOSR3_CH24E_MASK << RI_IOSR3_CH24E_OFFSET)
+// IOGCR
+#define RI_IOGCR_IOM10_OFFSET           0
+#define RI_IOGCR_IOM10_MASK             0x01
+#define RI_IOGCR_IOM10                  (RI_IOGCR_IOM10_MASK << RI_IOGCR_IOM10_OFFSET)
+#define RI_IOGCR_IOM11_OFFSET           1
+#define RI_IOGCR_IOM11_MASK             0x01
+#define RI_IOGCR_IOM11                  (RI_IOGCR_IOM11_MASK << RI_IOGCR_IOM11_OFFSET)
+#define RI_IOGCR_IOM20_OFFSET           2
+#define RI_IOGCR_IOM20_MASK             0x01
+#define RI_IOGCR_IOM20                  (RI_IOGCR_IOM20_MASK << RI_IOGCR_IOM20_OFFSET)
+#define RI_IOGCR_IOM21_OFFSET           3
+#define RI_IOGCR_IOM21_MASK             0x01
+#define RI_IOGCR_IOM21                  (RI_IOGCR_IOM21_MASK << RI_IOGCR_IOM21_OFFSET)
+#define RI_IOGCR_IOM30_OFFSET           4
+#define RI_IOGCR_IOM30_MASK             0x01
+#define RI_IOGCR_IOM30                  (RI_IOGCR_IOM30_MASK << RI_IOGCR_IOM30_OFFSET)
+#define RI_IOGCR_IOM31_OFFSET           5
+#define RI_IOGCR_IOM31_MASK             0x01
+#define RI_IOGCR_IOM31                  (RI_IOGCR_IOM31_MASK << RI_IOGCR_IOM31_OFFSET)
+#define RI_IOGCR_IOM40_OFFSET           6
+#define RI_IOGCR_IOM40_MASK             0x01
+#define RI_IOGCR_IOM40                  (RI_IOGCR_IOM40_MASK << RI_IOGCR_IOM40_OFFSET)
+#define RI_IOGCR_IOM41_OFFSET           7
+#define RI_IOGCR_IOM41_MASK             0x01
+#define RI_IOGCR_IOM41                  (RI_IOGCR_IOM41_MASK << RI_IOGCR_IOM41_OFFSET)
+// ASCR1
+#define RI_ASCR1_AS0_OFFSET             0
+#define RI_ASCR1_AS0_MASK               0x01
+#define RI_ASCR1_AS0                    (RI_ASCR1_AS0_MASK << RI_ASCR1_AS0_OFFSET)
+#define RI_ASCR1_AS1_OFFSET             1
+#define RI_ASCR1_AS1_MASK               0x01
+#define RI_ASCR1_AS1                    (RI_ASCR1_AS1_MASK << RI_ASCR1_AS1_OFFSET)
+#define RI_ASCR1_AS2_OFFSET             2
+#define RI_ASCR1_AS2_MASK               0x01
+#define RI_ASCR1_AS2                    (RI_ASCR1_AS2_MASK << RI_ASCR1_AS2_OFFSET)
+#define RI_ASCR1_AS3_OFFSET             3
+#define RI_ASCR1_AS3_MASK               0x01
+#define RI_ASCR1_AS3                    (RI_ASCR1_AS3_MASK << RI_ASCR1_AS3_OFFSET)
+#define RI_ASCR1_AS4_OFFSET             4
+#define RI_ASCR1_AS4_MASK               0x01
+#define RI_ASCR1_AS4                    (RI_ASCR1_AS4_MASK << RI_ASCR1_AS4_OFFSET)
+#define RI_ASCR1_AS5_OFFSET             5
+#define RI_ASCR1_AS5_MASK               0x01
+#define RI_ASCR1_AS5                    (RI_ASCR1_AS5_MASK << RI_ASCR1_AS5_OFFSET)
+#define RI_ASCR1_AS6_OFFSET             6
+#define RI_ASCR1_AS6_MASK               0x01
+#define RI_ASCR1_AS6                    (RI_ASCR1_AS6_MASK << RI_ASCR1_AS6_OFFSET)
+#define RI_ASCR1_AS7_OFFSET             7
+#define RI_ASCR1_AS7_MASK               0x01
+#define RI_ASCR1_AS7                    (RI_ASCR1_AS7_MASK << RI_ASCR1_AS7_OFFSET)
+// ASCR2
+#define RI_ASCR2_AS8_OFFSET             0
+#define RI_ASCR2_AS8_MASK               0x01
+#define RI_ASCR2_AS8                    (RI_ASCR2_AS8_MASK << RI_ASCR2_AS8_OFFSET)
+#define RI_ASCR2_AS9_OFFSET             1
+#define RI_ASCR2_AS9_MASK               0x01
+#define RI_ASCR2_AS9                    (RI_ASCR2_AS9_MASK << RI_ASCR2_AS9_OFFSET)
+#define RI_ASCR2_AS10_OFFSET            2
+#define RI_ASCR2_AS10_MASK              0x01
+#define RI_ASCR2_AS10                   (RI_ASCR2_AS10_MASK << RI_ASCR2_AS10_OFFSET)
+#define RI_ASCR2_AS11_OFFSET            3
+#define RI_ASCR2_AS11_MASK              0x01
+#define RI_ASCR2_AS11                   (RI_ASCR2_AS11_MASK << RI_ASCR2_AS11_OFFSET)
+#define RI_ASCR2_AS14_OFFSET            6
+#define RI_ASCR2_AS14_MASK              0x01
+#define RI_ASCR2_AS14                   (RI_ASCR2_AS14_MASK << RI_ASCR2_AS14_OFFSET)
+// RCR
+#define RI_RCR_10KPU_OFFSET             0
+#define RI_RCR_10KPU_MASK               0x01
+#define RI_RCR_10KPU                    (RI_RCR_10KPU_MASK << RI_RCR_10KPU_OFFSET)
+#define RI_RCR_400KPU_OFFSET            1
+#define RI_RCR_400KPU_MASK              0x01
+#define RI_RCR_400KPU                   (RI_RCR_400KPU_MASK << RI_RCR_400KPU_OFFSET)
+#define RI_RCR_10KPD_OFFSET             2
+#define RI_RCR_10KPD_MASK               0x01
+#define RI_RCR_10KPD                    (RI_RCR_10KPD_MASK << RI_RCR_10KPD_OFFSET)
+#define RI_RCR_400KPD_OFFSET            3
+#define RI_RCR_400KPD_MASK              0x01
+#define RI_RCR_400KPD                   (RI_RCR_400KPD_MASK << RI_RCR_400KPD_OFFSET)
 
+/* ============== SYSCFG =============== */
+// RMPCR1
+#define SYSCFG_RMPCR1_ADC1DMA_REMAP_OFFSET  0
+#define SYSCFG_RMPCR1_ADC1DMA_REMAP_MASK    0x02
+#define SYSCFG_RMPCR1_ADC1DMA_REMAP         (SYSCFG_RMPCR1_ADC1DMA_REMAP_MASK << SYSCFG_RMPCR1_ADC1DMA_REMAP_OFFSET)
+#define SYSCFG_RMPCR1_TIM4DMA_REMAP_OFFSET  2
+#define SYSCFG_RMPCR1_TIM4DMA_REMAP_MASK    0x02
+#define SYSCFG_RMPCR1_TIM4DMA_REMAP         (SYSCFG_RMPCR1_TIM4DMA_REMAP_MASK << SYSCFG_RMPCR1_TIM4DMA_REMAP_OFFSET)
+#define SYSCFG_RMPCR1_USART1TR_REMAP_OFFSET 4
+#define SYSCFG_RMPCR1_USART1TR_REMAP_MASK   0x02
+#define SYSCFG_RMPCR1_USART1TR_REMAP        (SYSCFG_RMPCR1_USART1TR_REMAP_MASK << SYSCFG_RMPCR1_USART1TR_REMAP_OFFSET)
+#define SYSCFG_RMPCR1_USART1CK_REMAP_OFFSET 6
+#define SYSCFG_RMPCR1_USART1CK_REMAP_MASK   0x01
+#define SYSCFG_RMPCR1_USART1CK_REMAP        (SYSCFG_RMPCR1_USART1CK_REMAP_MASK << SYSCFG_RMPCR1_USART1CK_REMAP_OFFSET)
+#define SYSCFG_RMPCR1_SPI1_REMAP1_OFFSET    7
+#define SYSCFG_RMPCR1_SPI1_REMAP1_MASK      0x01
+#define SYSCFG_RMPCR1_SPI1_REMAP1           (SYSCFG_RMPCR1_SPI1_REMAP1_MASK << SYSCFG_RMPCR1_SPI1_REMAP1_OFFSET)
+// RMPCR2
+#define SYSCFG_RMPCR2_ADC1TRIG_REMAP_OFFSET 0
+#define SYSCFG_RMPCR2_ADC1TRIG_REMAP_MASK   0x01
+#define SYSCFG_RMPCR2_ADC1TRIG_REMAP        (SYSCFG_RMPCR2_ADC1TRIG_REMAP_MASK << SYSCFG_RMPCR2_ADC1TRIG_REMAP_OFFSET)
+#define SYSCFG_RMPCR2_TIM2TRIG_REMAP_OFFSET 1
+#define SYSCFG_RMPCR2_TIM2TRIG_REMAP_MASK   0x01
+#define SYSCFG_RMPCR2_TIM2TRIG_REMAP        (SYSCFG_RMPCR2_TIM2TRIG_REMAP_MASK << SYSCFG_RMPCR2_TIM2TRIG_REMAP_OFFSET)
+#define SYSCFG_RMPCR2_TIM3TRIG_REMAP_OFFSET 1
+#define SYSCFG_RMPCR2_TIM3TRIG_REMAP_MASK   0x01
+#define SYSCFG_RMPCR2_TIM3TRIG_REMAP        (SYSCFG_RMPCR2_TIM3TRIG_REMAP_MASK << SYSCFG_RMPCR2_TIM3TRIG_REMAP_OFFSET)
 
 
 
