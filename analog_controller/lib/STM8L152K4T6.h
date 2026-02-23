@@ -165,6 +165,27 @@ typedef struct {
 } power_typedef_t;
 
 
+// Inter_integrated Circuit (I2C)
+typedef struct {
+    volatile unsigned char CR1;             /* offset 0x00 */
+    volatile unsigned char CR2;             /* offset 0x01 */
+    volatile unsigned char FREQR;           /* offset 0x02 */
+    volatile unsigned char OARL;            /* offset 0x03 */
+    volatile unsigned char OARH;            /* offset 0x04 */
+    volatile unsigned char RESERVED;
+    volatile unsigned char DR;              /* offset 0x06 */
+    volatile unsigned char SR1;             /* offset 0x07 */
+    volatile unsigned char SR2;             /* offset 0x08 */
+    volatile unsigned char SR3;             /* offset 0x09 */
+    volatile unsigned char ITR;             /* offset 0x0A */
+    volatile unsigned char CCRL;            /* offset 0x0B */
+    volatile unsigned char CCRH;            /* offset 0x0C */
+    volatile unsigned char TRISER;          /* offset 0x0D */
+    volatile unsigned char PECR;            /* offset 0x0E */
+} i2c_typedef_t;
+
+
+
 // Reset
 typedef struct {
     volatile unsigned char CR;              /* offset 0x00 */
@@ -223,6 +244,8 @@ typedef struct {
 #define TIM4_BASE               0x52E0
 // Power
 #define POWER_BASE              0x50B2
+// I2C
+#define I2C_BASE                0x5210
 // Reset
 #define RESET_BASE              0x50B0
 // ADC
@@ -257,6 +280,8 @@ typedef struct {
 #define TIM4   ((timer_8_bit_typedef_t*) TIM4_BASE)
 // Power
 #define POWER  ((power_typedef_t*) POWER_BASE)
+// I2C
+#define I2C    ((i2c_typedef_t*) I2C)
 // Reset
 #define RESET  ((reset_typedef_t*) RESET_BASE)
 // ADC
@@ -1074,13 +1099,13 @@ typedef struct {
 /* ============== SYSCFG =============== */
 // RMPCR1
 #define SYSCFG_RMPCR1_ADC1DMA_REMAP_OFFSET      0
-#define SYSCFG_RMPCR1_ADC1DMA_REMAP_MASK        0x02
+#define SYSCFG_RMPCR1_ADC1DMA_REMAP_MASK        0x03
 #define SYSCFG_RMPCR1_ADC1DMA_REMAP             (SYSCFG_RMPCR1_ADC1DMA_REMAP_MASK << SYSCFG_RMPCR1_ADC1DMA_REMAP_OFFSET)
 #define SYSCFG_RMPCR1_TIM4DMA_REMAP_OFFSET      2
-#define SYSCFG_RMPCR1_TIM4DMA_REMAP_MASK        0x02
+#define SYSCFG_RMPCR1_TIM4DMA_REMAP_MASK        0x03
 #define SYSCFG_RMPCR1_TIM4DMA_REMAP             (SYSCFG_RMPCR1_TIM4DMA_REMAP_MASK << SYSCFG_RMPCR1_TIM4DMA_REMAP_OFFSET)
 #define SYSCFG_RMPCR1_USART1TR_REMAP_OFFSET     4
-#define SYSCFG_RMPCR1_USART1TR_REMAP_MASK       0x02
+#define SYSCFG_RMPCR1_USART1TR_REMAP_MASK       0x03
 #define SYSCFG_RMPCR1_USART1TR_REMAP            (SYSCFG_RMPCR1_USART1TR_REMAP_MASK << SYSCFG_RMPCR1_USART1TR_REMAP_OFFSET)
 #define SYSCFG_RMPCR1_USART1CK_REMAP_OFFSET     6
 #define SYSCFG_RMPCR1_USART1CK_REMAP_MASK       0x01
@@ -1095,7 +1120,7 @@ typedef struct {
 #define SYSCFG_RMPCR2_TIM2TRIG_REMAP_OFFSET     1
 #define SYSCFG_RMPCR2_TIM2TRIG_REMAP_MASK       0x01
 #define SYSCFG_RMPCR2_TIM2TRIG_REMAP            (SYSCFG_RMPCR2_TIM2TRIG_REMAP_MASK << SYSCFG_RMPCR2_TIM2TRIG_REMAP_OFFSET)
-#define SYSCFG_RMPCR2_TIM3TRIG_REMAP_OFFSET     1
+#define SYSCFG_RMPCR2_TIM3TRIG_REMAP_OFFSET     2
 #define SYSCFG_RMPCR2_TIM3TRIG_REMAP_MASK       0x01
 #define SYSCFG_RMPCR2_TIM3TRIG_REMAP            (SYSCFG_RMPCR2_TIM3TRIG_REMAP_MASK << SYSCFG_RMPCR2_TIM3TRIG_REMAP_OFFSET)
 #define SYSCFG_RMPCR2_TIM2TRIGLSE_REMAP_OFFSET  3
@@ -1110,9 +1135,9 @@ typedef struct {
 
 /* ============== EXTI =============== */
 //CR1
-#define EXTI_CR1_P0ISO_OFFSET       0 
+#define EXTI_CR1_P0IS0_OFFSET       0 
 #define EXTI_CR1_P0IS0_MASK         0x01
-#define EXTI_CR1_P0IS0              (EXTI_CR1_P0IS0_MASK << EXTI_CR1_P0ISO_OFFSET)
+#define EXTI_CR1_P0IS0              (EXTI_CR1_P0IS0_MASK << EXTI_CR1_P0IS0_OFFSET)
 #define EXTI_CR1_P0IS1_OFFSET       1 
 #define EXTI_CR1_P0IS1_MASK         0x01
 #define EXTI_CR1_P0IS1              (EXTI_CR1_P0IS1_MASK << EXTI_CR1_P0IS1_OFFSET)
@@ -1252,5 +1277,900 @@ typedef struct {
 #define EXTI_CONF1_PFHIS_OFFSET     7
 #define EXTI_CONF1_PFHIS_MASK       0x01
 #define EXTI_CONF1_PFHIS            (EXTI_CONF1_PFHIS_MASK << EXTI_CONF1_PFHIS_OFFSET)
+
+/* ============== USART ============== */
+// SR
+#define USART_SR_PE_OFFSET          0
+#define USART_SR_PE_MASK            0x01
+#define USART_SR_PE                 (USART_SR_PE_MASK << USART_SR_PE_OFFSET)
+#define USART_SR_FE_OFFSET          1
+#define USART_SR_FE_MASK            0x01
+#define USART_SR_FE                 (USART_SR_FE_MASK << USART_SR_FE_OFFSET)
+#define USART_SR_NF_OFFSET          2
+#define USART_SR_NF_MASK            0x01
+#define USART_SR_NF                 (USART_SR_NF_MASK << USART_SR_NF_OFFSET)
+#define USART_SR_OR_OFFSET          3
+#define USART_SR_OR_MASK            0x01
+#define USART_SR_OR                 (USART_SR_OR_MASK << USART_SR_OR_OFFSET)
+#define USART_SR_IDLE_OFFSET        4
+#define USART_SR_IDLE_MASK          0x01
+#define USART_SR_IDLE               (USART_SR_IDLE_MASK << USART_SR_IDLE_OFFSET)
+#define USART_SR_RXNE_OFFSET        5
+#define USART_SR_RXNE_MASK          0x01
+#define USART_SR_RXNE               (USART_SR_RXNE_MASK << USART_SR_RXNE_OFFSET)
+#define USART_SR_TC_OFFSET          6
+#define USART_SR_TC_MASK            0x01
+#define USART_SR_TC                 (USART_SR_TC_MASK << USART_SR_TC_OFFSET)
+#define USART_SR_TXE_OFFSET         7
+#define USART_SR_TXE_MASK           0x01
+#define USART_SR_TXE                (USART_SR_TXE_MASK << USART_SR_TXE_OFFSET)
+// DR
+#define USART_DR_MASK               0xFF
+#define USART_DR                    (USART_DR_MASK)
+// BRR1
+#define USART_BRR1_MASK             0xFF
+#define USART_BRR1                  (USART_BRR1_MASK)
+// BRR2
+#define USART_BRR2_DIV_LOWER_OFFSET 0
+#define USART_BRR2_DIV_LOWER_MASK   0x0F
+#define USART_BRR2_DIV_LOWER        (USART_BRR2_DIV_LOWER_MASK << USART_BRR2_DIV_LOWER_OFFSET)
+#define USART_BRR2_DIV_UPPER_OFFSET 4
+#define USART_BRR2_DIV_UPPER_MASK   0x0F
+#define USART_BRR2_DIV_UPPER        (USART_BRR2_DIV_UPPER_MASK << USART_BRR2_DIV_UPPER_OFFSET)
+// CR1
+#define USART_CR1_PIEN_OFFSET       0
+#define USART_CR1_PIEN_MASK         0x01
+#define USART_CR1_PIEN              (USART_CR1_PIEN_MASK << USART_CR1_PIEN_OFFSET)
+#define USART_CR1_PS_OFFSET         1
+#define USART_CR1_PS_MASK           0x01
+#define USART_CR1_PS                (USART_CR1_PS_MASK << USART_CR1_PS_OFFSET)
+#define USART_CR1_PCEN_OFFSET       2
+#define USART_CR1_PCEN_MASK         0x01
+#define USART_CR1_PCEN              (USART_CR1_PCEN_MASK << USART_CR1_PCEN_OFFSET)
+#define USART_CR1_WAKE_OFFSET       3
+#define USART_CR1_WAKE_MASK         0x01
+#define USART_CR1_WAKE              (USART_CR1_WAKE_MASK << USART_CR1_WAKE_OFFSET)
+#define USART_CR1_M_OFFSET          4
+#define USART_CR1_M_MASK            0x01
+#define USART_CR1_M                 (USART_CR1_M_MASK << USART_CR1_M_OFFSET)
+#define USART_CR1_USARTD_OFFSET     5
+#define USART_CR1_USARTD_MASK       0x01
+#define USART_CR1_USARTD            (USART_CR1_USARTD_MASK << USART_CR1_USARTD_OFFSET)
+#define USART_CR1_T8_OFFSET         6
+#define USART_CR1_T8_MASK           0x01
+#define USART_CR1_T8                (USART_CR1_T8_MASK << USART_CR1_T8_OFFSET)
+#define USART_CR1_R8_OFFSET         7
+#define USART_CR1_R8_MASK           0x01
+#define USART_CR1_R8                (USART_CR1_R8_MASK << USART_CR1_R8_OFFSET)
+// CR2
+#define USART_CR2_SBK_OFFSET        0
+#define USART_CR2_SBK_MASK          0x01
+#define USART_CR2_SBK               (USART_CR2_SBK_MASK << USART_CR2_SBK_OFFSET)
+#define USART_CR2_RWU_OFFSET        1
+#define USART_CR2_RWU_MASK          0x01
+#define USART_CR2_RWU               (USART_CR2_RWU_MASK << USART_CR2_RWU_OFFSET)
+#define USART_CR2_REN_OFFSET        2
+#define USART_CR2_REN_MASK          0x01
+#define USART_CR2_REN               (USART_CR2_REN_MASK << USART_CR2_REN_OFFSET)
+#define USART_CR2_TEN_OFFSET        3
+#define USART_CR2_TEN_MASK          0x01
+#define USART_CR2_TEN               (USART_CR2_TEN_MASK << USART_CR2_TEN_OFFSET)
+#define USART_CR2_ILIEN_OFFSET      4
+#define USART_CR2_ILIEN_MASK        0x01
+#define USART_CR2_ILIEN             (USART_CR2_ILIEN_MASK << USART_CR2_ILIEN_OFFSET)
+#define USART_CR2_RIEN_OFFSET       5
+#define USART_CR2_RIEN_MASK         0x01
+#define USART_CR2_RIEN              (USART_CR2_RIEN_MASK << USART_CR2_RIEN_OFFSET)
+#define USART_CR2_TCIEN_OFFSET      6
+#define USART_CR2_TCIEN_MASK        0x01
+#define USART_CR2_TCIEN             (USART_CR2_TCIEN_MASK << USART_CR2_TCIEN_OFFSET)
+#define USART_CR2_TIEN_OFFSET       0
+#define USART_CR2_TIEN_MASK         0x01
+#define USART_CR2_TIEN              (USART_CR2_TIEN_MASK << USART_CR2_TIEN_OFFSET)
+// CR3
+#define USART_CR3_LBCL_OFFSET       0
+#define USART_CR3_LBCL_MASK         0x01
+#define USART_CR3_LBCL              (USART_CR3_LBCL_MASK << USART_CR3_LBCL_OFFSET)
+#define USART_CR3_CPHA_OFFSET       1
+#define USART_CR3_CPHA_MASK         0x01
+#define USART_CR3_CPHA              (USART_CR3_CPHA_MASK << USART_CR3_CPHA_OFFSET)
+#define USART_CR3_CPOL_OFFSET       2
+#define USART_CR3_CPOL_MASK         0x01
+#define USART_CR3_CPOL              (USART_CR3_CPOL_MASK << USART_CR3_CPOL_OFFSET)
+#define USART_CR3_CKEN_OFFSET       3
+#define USART_CR3_CKEN_MASK         0x01
+#define USART_CR3_CKEN              (USART_CR3_CKEN_MASK << USART_CR3_CKEN_OFFSET)
+#define USART_CR3_STOP_OFFSET       4
+#define USART_CR3_STOP_MASK         0x03
+#define USART_CR3_STOP              (USART_CR3_STOP_MASK << USART_CR3_STOP_OFFSET)
+// CR4
+#define USART_CR4_ADD_OFFSET        0
+#define USART_CR4_ADD_MASK          0x0F
+#define USART_CR4_ADD               (USART_CR4_ADD_MASK << USART_CR4_ADD_OFFSET)
+// CR5
+#define USART_CR5_EIE_OFFSET        0
+#define USART_CR5_EIE_MASK          0x01
+#define USART_CR5_EIE               (USART_CR5_EIE_MASK << USART_CR5_EIE_OFFSET)
+#define USART_CR5_IREN_OFFSET       1
+#define USART_CR5_IREN_MASK         0x01
+#define USART_CR5_IREN              (USART_CR5_IREN_MASK << USART_CR5_IREN_OFFSET)
+#define USART_CR5_IRLP_OFFSET       2
+#define USART_CR5_IRLP_MASK         0x01
+#define USART_CR5_IRLP              (USART_CR5_IRLP_MASK << USART_CR5_IRLP_OFFSET)
+#define USART_CR5_HDSEL_OFFSET      3
+#define USART_CR5_HDSEL_MASK        0x01
+#define USART_CR5_HDSEL             (USART_CR5_HDSEL_MASK << USART_CR5_HDSEL_OFFSET)
+#define USART_CR5_NACK_OFFSET       4
+#define USART_CR5_NACK_MASK         0x01
+#define USART_CR5_NACK              (USART_CR5_NACK_MASK << USART_CR5_NACK_OFFSET)
+#define USART_CR5_SCEN_OFFSET       5
+#define USART_CR5_SCEN_MASK         0x01
+#define USART_CR5_SCEN              (USART_CR5_SCEN_MASK << USART_CR5_SCEN_OFFSET)
+#define USART_CR5_DMAR_OFFSET       6
+#define USART_CR5_DMAR_MASK         0x01
+#define USART_CR5_DMAR              (USART_CR5_DMAR_MASK << USART_CR5_DMAR_OFFSET)
+#define USART_CR5_DMAT_OFFSET       7
+#define USART_CR5_DMAT_MASK         0x01
+#define USART_CR5_DMAT              (USART_CR5_DMAT_MASK << USART_CR5_DMAT_OFFSET)
+// GTR
+#define USART_GTR_GT_OFFSET         0
+#define USART_GTR_GT_MASK           0xFF
+#define USART_GTR_GT                (USART_GTR_GT_MASK << USART_GTR_GT_OFFSET)
+// PSCR
+#define USART_PSCRR_PSCR_OFFSET     0
+#define USART_PSCRR_PSCR_MASK       0xFF
+#define USART_PSCRR_PSCR            (USART_PSCRR_PSCR_MASK << USART_PSCRR_PSCR_OFFSET)
+
+/* =============== SPI ================ */
+// CR1
+#define SPI_CR1_CPHA_OFFSET         0
+#define SPI_CR1_CPHA_MASK           0x01
+#define SPI_CR1_CPHA                (SPI_CR1_CPHA_MASK << SPI_CR1_CPHA_OFFSET)
+#define SPI_CR1_CPOL_OFFSET         1
+#define SPI_CR1_CPOL_MASK           0x01
+#define SPI_CR1_CPOL                (SPI_CR1_CPOL_MASK << SPI_CR1_CPOL_OFFSET)
+#define SPI_CR1_MSTR_OFFSET         2
+#define SPI_CR1_MSTR_MASK           0x01
+#define SPI_CR1_MSTR                (SPI_CR1_MSTR_MASK << SPI_CR1_MSTR_OFFSET)
+#define SPI_CR1_BR0_OFFSET          3
+#define SPI_CR1_BR0_MASK            0x01
+#define SPI_CR1_BR0                 (SPI_CR1_BR0_MASK << SPI_CR1_BR0_OFFSET)    
+#define SPI_CR1_BR1_OFFSET          4
+#define SPI_CR1_BR1_MASK            0x01
+#define SPI_CR1_BR1                 (SPI_CR1_BR1_MASK << SPI_CR1_BR1_OFFSET)    
+#define SPI_CR1_BR2_OFFSET          5
+#define SPI_CR1_BR2_MASK            0x01
+#define SPI_CR1_BR2                 (SPI_CR1_BR2_MASK << SPI_CR1_BR2_OFFSET)    
+#define SPI_CR1_SPE_OFFSET          6
+#define SPI_CR1_SPE_MASK            0x01
+#define SPI_CR1_SPE                 (SPI_CR1_SPE_MASK << SPI_CR1_SPE_OFFSET)
+#define SPI_CR1_LSB_FIRST_OFFSET    7
+#define SPI_CR1_LSB_FIRST_MASK      0x01
+#define SPI_CR1_LSB_FIRST           (SPI_CR1_LSB_FIRST_MASK << SPI_CR1_LSB_FIRST_OFFSET)
+// CR2
+#define SPI_CR2_SSI_OFFSET          0
+#define SPI_CR2_SSI_MASK            0x01
+#define SPI_CR2_SSI                 (SPI_CR2_SSI_MASK << SPI_CR2_SSI_OFFSET)
+#define SPI_CR2_SSM_OFFSET          1
+#define SPI_CR2_SSM_MASK            0x01
+#define SPI_CR2_SSM                 (SPI_CR2_SSM_MASK << SPI_CR2_SSM_OFFSET)
+#define SPI_CR2_RXONLY_OFFSET       2
+#define SPI_CR2_RXONLY_MASK         0x01
+#define SPI_CR2_RXONLY              (SPI_CR2_RXONLY_MASK << SPI_CR2_RXONLY_OFFSET)
+#define SPI_CR2_CRCNEXT_OFFSET      4
+#define SPI_CR2_CRCNEXT_MASK        0x01
+#define SPI_CR2_CRCNEXT             (SPI_CR2_CRCNEXT_MASK << SPI_CR2_CRCNEXT_OFFSET)
+#define SPI_CR2_CRCEN_OFFSET        5
+#define SPI_CR2_CRCEN_MASK          0x01
+#define SPI_CR2_CRCEN               (SPI_CR2_CRCEN_MASK << SPI_CR2_CRCEN_OFFSET)
+#define SPI_CR2_BDOE_OFFSET         6
+#define SPI_CR2_BDOE_MASK           0x01
+#define SPI_CR2_BDOE                (SPI_CR2_BDOE_MASK << SPI_CR2_BDOE_OFFSET)
+#define SPI_CR2_BDM_OFFSET          7
+#define SPI_CR2_BDM_MASK            0x01
+#define SPI_CR2_BDM                 (SPI_CR2_BDM_MASK << SPI_CR2_BDM_OFFSET)
+// ICR
+#define SPI_ICR_RXDMAEN_OFFSET      0
+#define SPI_ICR_RXDMAEN_MASK        0x01
+#define SPI_ICR_RXDMAEN             (SPI_ICR_RXDMAEN_MASK << SPI_ICR_RXDMAEN_OFFSET)
+#define SPI_ICR_TXDMAEN_OFFSET      1
+#define SPI_ICR_TXDMAEN_MASK        0x01
+#define SPI_ICR_TXDMAEN             (SPI_ICR_TXDMAEN_MASK << SPI_ICR_TXDMAEN_OFFSET)
+#define SPI_ICR_WKIE_OFFSET         4
+#define SPI_ICR_WKIE_MASK           0x01
+#define SPI_ICR_WKIE                (SPI_ICR_WKIE_MASK << SPI_ICR_WKIE_OFFSET)
+#define SPI_ICR_ERRIE_OFFSET        5
+#define SPI_ICR_ERRIE_MASK          0x01
+#define SPI_ICR_ERRIE               (SPI_ICR_ERRIE_MASK << SPI_ICR_ERRIE_OFFSET)
+#define SPI_ICR_RXIE_OFFSET         6
+#define SPI_ICR_RXIE_MASK           0x01
+#define SPI_ICR_RXIE                (SPI_ICR_RXIE_MASK << SPI_ICR_RXIE_OFFSET)
+#define SPI_ICR_TXIE_OFFSET         7
+#define SPI_ICR_TXIE_MASK           0x01
+#define SPI_ICR_TXIE                (SPI_ICR_TXIE_MASK << SPI_ICR_TXIE_OFFSET)
+// SR
+#define SPI_SR_RXNE_OFFSET          0
+#define SPI_SR_RXNE_MASK            0x01
+#define SPI_SR_RXNE                 (SPI_SR_RXNE_MASK << SPI_SR_RXNE_OFFSET)
+#define SPI_SR_TXE_OFFSET           1
+#define SPI_SR_TXE_MASK             0x01
+#define SPI_SR_TXE                  (SPI_SR_TXE_MASK << SPI_SR_TXE_OFFSET)
+#define SPI_SR_WKUP_OFFSET          3
+#define SPI_SR_WKUP_MASK            0x01
+#define SPI_SR_WKUP                 (SPI_SR_WKUP_MASK << SPI_SR_WKUP_OFFSET)
+#define SPI_SR_CRCERR_OFFSET        4
+#define SPI_SR_CRCERR_MASK          0x01
+#define SPI_SR_CRCERR               (SPI_SR_CRCERR_MASK << SPI_SR_CRCERR_OFFSET)
+#define SPI_SR_MODF_OFFSET          5
+#define SPI_SR_MODF_MASK            0x01
+#define SPI_SR_MODF                 (SPI_SR_MODF_MASK << SPI_SR_MODF_OFFSET)
+#define SPI_SR_OVR_OFFSET           6
+#define SPI_SR_OVR_MASK             0x01
+#define SPI_SR_OVR                  (SPI_SR_OVR_MASK << SPI_SR_OVR_OFFSET)
+#define SPI_SR_BSY_OFFSET           7
+#define SPI_SR_BSY_MASK             0x01
+#define SPI_SR_BSY                  (SPI_SR_BSY_MASK << SPI_SR_BSY_OFFSET)
+// DR
+#define SPI_DR_OFFSET               0
+#define SPI_DR_MASK                 0xFF
+#define SPI_DR                      (SPI_DR_MASK << SPI_DR_OFFSET)
+// CRCPR
+#define SPI_CRCPR_OFFSET            0
+#define SPI_CRCPR_MASK              0x01
+#define SPI_CRCPR                   (SPI_CRCPR_MASK << SPI_CRCPR_OFFSET)
+// RXCRCR
+#define SPI_RXCRCR_OFFSET           0
+#define SPI_RXCRCR_MASK             0x01
+#define SPI_RXCRCR                  (SPI_RXCRCR_MASK << SPI_RXCRCR_OFFSET)
+// TXCRCR
+#define SPI_TXCRCR_OFFSET           0
+#define SPI_TXCRCR_MASK             0x01
+#define SPI_TXCRCR                  (SPI_TXCRCR_MASK << SPI_TXCRCR_OFFSET)
+
+/* =============== TIM4 ================ */
+// CR1
+#define TIM4_CR1_CEN_OFFSET          0
+#define TIM4_CR1_CEN_MASK            0x01
+#define TIM4_CR1_CEN                 (TIM4_CR1_CEN_MASK << TIM4_CR1_CEN_OFFSET)
+#define TIM4_CR1_UDIS_OFFSET         1
+#define TIM4_CR1_UDIS_MASK           0x01
+#define TIM4_CR1_UDIS                (TIM4_CR1_UDIS_MASK << TIM4_CR1_UDIS_OFFSET)
+#define TIM4_CR1_URS_OFFSET          2
+#define TIM4_CR1_URS_MASK            0x01
+#define TIM4_CR1_URS                 (TIM4_CR1_URS_MASK << TIM4_CR1_URS_OFFSET)
+#define TIM4_CR1_OPM_OFFSET          3
+#define TIM4_CR1_OPM_MASK            0x01
+#define TIM4_CR1_OPM                 (TIM4_CR1_OPM_MASK << TIM4_CR1_OPM_OFFSET)
+#define TIM4_CR1_ARPE_OFFSET         7
+#define TIM4_CR1_ARPE_MASK           0x01
+#define TIM4_CR1_ARPE                (TIM4_CR1_ARPE_MASK << TIM4_CR1_ARPE_OFFSET)
+// CR2
+#define TIM4_CR2_MMS0_OFFSET          4
+#define TIM4_CR2_MMS0_MASK            0x01
+#define TIM4_CR2_MMS0                 (TIM4_CR2_MMS0_MASK << TIM4_CR2_MMS0_OFFSET)
+#define TIM4_CR2_MMS1_OFFSET          5
+#define TIM4_CR2_MMS1_MASK            0x01
+#define TIM4_CR2_MMS1                 (TIM4_CR2_MMS1_MASK << TIM4_CR2_MMS1_OFFSET)
+#define TIM4_CR2_MMS2_OFFSET          6
+#define TIM4_CR2_MMS2_MASK            0x01
+#define TIM4_CR2_MMS2                 (TIM4_CR2_MMS2_MASK << TIM4_CR2_MMS2_OFFSET)
+// SMCR
+#define TIM4_SMCR_SMS0_OFFSET         0
+#define TIM4_SMCR_SMS0_MASK           0x01
+#define TIM4_SMCR_SMS0                (TIM4_SMCR_SMS0_MASK << TIM4_SMCR_SMS0_OFFSET)
+#define TIM4_SMCR_SMS1_OFFSET         1
+#define TIM4_SMCR_SMS1_MASK           0x01
+#define TIM4_SMCR_SMS1                (TIM4_SMCR_SMS1_MASK << TIM4_SMCR_SMS1_OFFSET)
+#define TIM4_SMCR_SMS2_OFFSET         2
+#define TIM4_SMCR_SMS2_MASK           0x01
+#define TIM4_SMCR_SMS2                (TIM4_SMCR_SMS2_MASK << TIM4_SMCR_SMS2_OFFSET)
+#define TIM4_SMCR_TS0_OFFSET          4
+#define TIM4_SMCR_TS0_MASK            0x01
+#define TIM4_SMCR_TS0                 (TIM4_SMCR_TS0_MASK << TIM4_SMCR_TS0_OFFSET)
+#define TIM4_SMCR_TS1_OFFSET          5
+#define TIM4_SMCR_TS1_MASK            0x01
+#define TIM4_SMCR_TS1                 (TIM4_SMCR_TS1_MASK << TIM4_SMCR_TS1_OFFSET)
+#define TIM4_SMCR_TS2_OFFSET          6
+#define TIM4_SMCR_TS2_MASK            0x01
+#define TIM4_SMCR_TS2                 (TIM4_SMCR_TS2_MASK << TIM4_SMCR_TS2_OFFSET)
+#define TIM4_SMCR_MSM_OFFSET          0
+#define TIM4_SMCR_MSM_MASK            0x01
+#define TIM4_SMCR_MSM                 (TIM4_SMCR_MSM_MASK << TIM4_SMCR_MSM_OFFSET)
+// DER
+#define TIM4_DER_UDE_OFFSET           0
+#define TIM4_DER_UDE_MASK             0x01
+#define TIM4_DER_UDE                  (TIM4_DER_UDE_MASK << TIM4_DER_UDE_OFFSET)
+// IER
+#define TIM4_IER_UIE_OFFSET          0
+#define TIM4_IER_UIE_MASK            0x01
+#define TIM4_IER_UIE                 (TIM4_IER_UIE_MASK << TIM4_IER_UIE_OFFSET)
+#define TIM4_IER_TIE_OFFSET          6
+#define TIM4_IER_TIE_MASK            0x01
+#define TIM4_IER_TIE                 (TIM4_IER_TIE_MASK << TIM4_IER_TIE_OFFSET)
+// SR1
+#define TIM4_SR1_UIF_OFFSET          0
+#define TIM4_SR1_UIF_MASK            0x01
+#define TIM4_SR1_UIF                 (TIM4_SR1_UIF_MASK << TIM4_SR1_UIF_OFFSET)
+#define TIM4_SR1_TIF_OFFSET          6
+#define TIM4_SR1_TIF_MASK            0x01
+#define TIM4_SR1_TIF                 (TIM4_SR1_TIF_MASK << TIM4_SR1_TIF_OFFSET)
+// EGR
+#define TIM4_EGR_UG_OFFSET           0
+#define TIM4_EGR_UG_MASK             0x01
+#define TIM4_EGR_UG                  (TIM4_EGR_UG_MASK << TIM4_EGR_UG_OFFSET)
+#define TIM4_EGR_TG_OFFSET           6
+#define TIM4_EGR_TG_MASK             0x01
+#define TIM4_EGR_TG                  (TIM4_EGR_TG_MASK << TIM4_EGR_TG_OFFSET)
+// CNTR
+#define TIM4_CNTR_OFFSET            0
+#define TIM4_CNTR_MASK              0xFF
+#define TIM4_CNTR                   (TIM4_CNTR_MASK << TIM4_CNTR_OFFSET)
+// PSCR
+#define TIM4_PSCR_OFFSET            0
+#define TIM4_PSCR_MASK              0x0F
+#define TIM4_PSCR                   (TIM4_PSCR_MASK << TIM4_PSCR_OFFSET)
+// ARR
+#define TIM4_ARR_OFFSET            0
+#define TIM4_ARR_MASK              0xFF
+#define TIM4_ARR                   (TIM4_ARR_MASK << TIM4_ARR_OFFSET)
+
+/* =============== POWER ================ */
+// CSR1
+#define POWER_CSR1_PVDE_OFFSET      0
+#define POWER_CSR1_PVDE_MASK        0x01
+#define POWER_CSR1_PVDE             (POWER_CSR1_PVDE_MASK << POWER_PVDE_OFFSET)
+#define POWER_CSR1_PLS0_OFFSET      1
+#define POWER_CSR1_PLS0_MASK        0x01
+#define POWER_CSR1_PLS0             (POWER_CSR1_PLS0_MASK << POWER_PLS0_OFFSET)
+#define POWER_CSR1_PLS1_OFFSET      2
+#define POWER_CSR1_PLS1_MASK        0x01
+#define POWER_CSR1_PLS1             (POWER_CSR1_PLS1_MASK << POWER_PLS1_OFFSET)
+#define POWER_CSR1_PLS2_OFFSET      3
+#define POWER_CSR1_PLS2_MASK        0x01
+#define POWER_CSR1_PLS2             (POWER_CSR1_PLS2_MASK << POWER_PLS2_OFFSET)
+#define POWER_CSR1_PVDIEN_OFFSET    4
+#define POWER_CSR1_PVDIEN_MASK      0x01
+#define POWER_CSR1_PVDIEN           (POWER_CSR1_PVDIEN_MASK << POWER_PVDIEN_OFFSET)
+#define POWER_CSR1_PVDIF_OFFSET     5
+#define POWER_CSR1_PVDIF_MASK       0x01
+#define POWER_CSR1_PVDIF            (POWER_CSR1_PVDIF_MASK << POWER_PVDIF_OFFSET)
+#define POWER_CSR1_PVDOF_OFFSET     6
+#define POWER_CSR1_PVDOF_MASK       0x01
+#define POWER_CSR1_PVDOF            (POWER_CSR1_PVDOF_MASK << POWER_PVDOF_OFFSET)
+// CSR2
+#define POWER_CSR2_VREFINTF_OFFSET  0
+#define POWER_CSR2_VREFINTF_MASK    0x01
+#define POWER_CSR2_VREFINTF         (POWER_CSR2_VREFINTF_MASK << POWER_VREFINTF_OFFSET)
+#define POWER_CSR2_ULP_OFFSET       0
+#define POWER_CSR2_ULP_MASK         0x01
+#define POWER_CSR2_ULP              (POWER_CSR2_ULP_MASK << POWER_ULP_OFFSET)
+#define POWER_CSR2_FWU_OFFSET       0
+#define POWER_CSR2_FWU_MASK         0x01
+#define POWER_CSR2_FWU              (POWER_CSR2_FWU_MASK << POWER_FWU_OFFSET)
+
+/* ================ I2C ================= */
+#define I2C_CR1_PE_OFFSET           0
+#define I2C_CR1_PE_MASK             0x01
+#define I2C_CR1_PE                  (I2C_CR1_PE_MASK << I2C_PE_OFFSET)
+#define I2C_CR1_SMBUS_OFFSET        1
+#define I2C_CR1_SMBUS_MASK          0x01
+#define I2C_CR1_SMBUS               (I2C_CR1_SMBUS_MASK << I2C_SMBUS_OFFSET)
+#define I2C_CR1_I2CLOAD_OFFSET      2
+#define I2C_CR1_I2CLOAD_MASK        0x01
+#define I2C_CR1_I2CLOAD             (I2C_CR1_I2CLOAD_MASK << I2C_I2CLOAD_OFFSET)
+#define I2C_CR1_SMBTYPE_OFFSET      3
+#define I2C_CR1_SMBTYPE_MASK        0x01
+#define I2C_CR1_SMBTYPE             (I2C_CR1_SMBTYPE_MASK << I2C_SMBTYPE_OFFSET)
+#define I2C_CR1_ENARP_OFFSET        4
+#define I2C_CR1_ENARP_MASK          0x01
+#define I2C_CR1_ENARP               (I2C_CR1_ENARP_MASK << I2C_ENARP_OFFSET)
+#define I2C_CR1_ENPEC_OFFSET        5
+#define I2C_CR1_ENPEC_MASK          0x01
+#define I2C_CR1_ENPEC               (I2C_CR1_ENPEC_MASK << I2C_ENPEC_OFFSET)
+#define I2C_CR1_ENGC_OFFSET         6
+#define I2C_CR1_ENGC_MASK           0x01
+#define I2C_CR1_ENGC                (I2C_CR1_ENGC_MASK << I2C_ENGC_OFFSET)
+#define I2C_CR1_NO_STRETCH_OFFSET   7
+#define I2C_CR1_NO_STRETCH_MASK     0x01
+#define I2C_CR1_NO_STRETCH          (I2C_CR1_NO_STRETCH_MASK << I2C_NO_STRETCH_OFFSET)
+// CR2
+#define I2C_CR2_START_OFFSET        0
+#define I2C_CR2_START_MASK          0x01
+#define I2C_CR2_START               (I2C_CR2_START_MASK << I2C_START_OFFSET)
+#define I2C_CR2_STOP_OFFSET         1
+#define I2C_CR2_STOP_MASK           0x01
+#define I2C_CR2_STOP                (I2C_CR2_STOP_MASK << I2C_STOP_OFFSET)
+#define I2C_CR2_ACK_OFFSET          2
+#define I2C_CR2_ACK_MASK            0x01
+#define I2C_CR2_ACK                 (I2C_CR2_ACK_MASK << I2C_ACK_OFFSET)
+#define I2C_CR2_POS_OFFSET          3
+#define I2C_CR2_POS_MASK            0x01
+#define I2C_CR2_POS                 (I2C_CR2_POS_MASK << I2C_POS_OFFSET)
+#define I2C_CR2_PEC_OFFSET          4
+#define I2C_CR2_PEC_MASK            0x01
+#define I2C_CR2_PEC                 (I2C_CR2_PEC_MASK << I2C_PEC_OFFSET)
+#define I2C_CR2_ALERT_OFFSET        5
+#define I2C_CR2_ALERT_MASK          0x01
+#define I2C_CR2_ALERT               (I2C_CR2_ALERT_MASK << I2C_ALERT_OFFSET)
+#define I2C_CR2_SWRST_OFFSET        7
+#define I2C_CR2_SWRST_MASK          0x01
+#define I2C_CR2_SWRST               (I2C_CR2_SWRST_MASK << I2C_SWRST_OFFSET)
+// FREQR
+#define I2C_FREQR_OFFSET            0
+#define I2C_FREQR_MASK              0x3F
+#define I2C_FREQR                   (I2C_FREQR_MASK << I2C_SWRST_OFFSET)
+// OARL
+#define I2C_OARL_ADD0_OFFSET        0
+#define I2C_OARL_ADD0_MASK          0x01
+#define I2C_OARL_ADD0               (I2C_OARL_ADD0_MASK << I2C_ADD0_OFFSET)
+#define I2C_OARL_ADD_OFFSET         1
+#define I2C_OARL_ADD_MASK           0x7F
+#define I2C_OARL_ADD                (I2C_OARL_ADD_MASK << I2C_ADD_OFFSET)
+#define I2C_OARH_ADD1_OFFSET        1
+#define I2C_OARH_ADD1_MASK          0x03
+#define I2C_OARH_ADD1               (I2C_OARH_ADD1_MASK << I2C_ADD1_OFFSET)
+#define I2C_OARH_ADDCONF_OFFSET     6
+#define I2C_OARH_ADDCONF_MASK       0x01
+#define I2C_OARH_ADDCONF            (I2C_OARH_ADDCONF_MASK << I2C_ADDCONF_OFFSET)
+#define I2C_OARH_ADDMODE_OFFSET     7
+#define I2C_OARH_ADDMODE_MASK       0x01
+#define I2C_OARH_ADDMODE            (I2C_OARH_ADDMODE_MASK << I2C_ADDMODE_OFFSET)
+// DR
+#define I2C_DR_OFFSET               0
+#define I2C_DR_MASK                 0xFF
+#define I2C_DR                      (I2C_DR_MASK << I2C_DR_OFFSET)
+// SR1
+#define I2C_SR1_SB_OFFSET           0
+#define I2C_SR1_SB_MASK             0x01
+#define I2C_SR1_SB                  (I2C_SR1_SB_MASK << I2C_SB_OFFSET)
+#define I2C_SR1_ADDR_OFFSET         1
+#define I2C_SR1_ADDR_MASK           0x01
+#define I2C_SR1_ADDR                (I2C_SR1_ADDR_MASK << I2C_ADDR_OFFSET)
+#define I2C_SR1_BTF_OFFSET          2
+#define I2C_SR1_BTF_MASK            0x01
+#define I2C_SR1_BTF                 (I2C_SR1_BTF_MASK << I2C_BTF_OFFSET)
+#define I2C_SR1_ADD10_OFFSET        3
+#define I2C_SR1_ADD10_MASK          0x01
+#define I2C_SR1_ADD10               (I2C_SR1_ADD10_MASK << I2C_ADD10_OFFSET)
+#define I2C_SR1_STOPF_OFFSET        4
+#define I2C_SR1_STOPF_MASK          0x01
+#define I2C_SR1_STOPF               (I2C_SR1_STOPF_MASK << I2C_STOPF_OFFSET)
+#define I2C_SR1_RXNE_OFFSET         6
+#define I2C_SR1_RXNE_MASK           0x01
+#define I2C_SR1_RXNE                (I2C_SR1_RXNE_MASK << I2C_RXNE_OFFSET)
+#define I2C_SR1_TXE_OFFSET          7
+#define I2C_SR1_TXE_MASK            0x01
+#define I2C_SR1_TXE                 (I2C_SR1_TXE_MASK << I2C_TXE_OFFSET)
+// SR2
+#define I2C_SR2_BERR_OFFSET         0
+#define I2C_SR2_BERR_MASK           0x01
+#define I2C_SR2_BERR                (I2C_SR2_BERR_MASK << I2C_BERR_OFFSET)
+#define I2C_SR2_ARLO_OFFSET         1
+#define I2C_SR2_ARLO_MASK           0x01
+#define I2C_SR2_ARLO                (I2C_SR2_ARLO_MASK << I2C_ARLO_OFFSET)
+#define I2C_SR2_AF_OFFSET           2
+#define I2C_SR2_AF_MASK             0x01
+#define I2C_SR2_AF                  (I2C_SR2_AF_MASK << I2C_AF_OFFSET)
+#define I2C_SR2_OVR_OFFSET          3
+#define I2C_SR2_OVR_MASK            0x01
+#define I2C_SR2_OVR                 (I2C_SR2_OVR_MASK << I2C_OVR_OFFSET)
+#define I2C_SR2_PECERR_OFFSET       4
+#define I2C_SR2_PECERR_MASK         0x01
+#define I2C_SR2_PECERR              (I2C_SR2_PECERR_MASK << I2C_PECERR_OFFSET)
+#define I2C_SR2_WUFH_OFFSET         5
+#define I2C_SR2_WUFH_MASK           0x01
+#define I2C_SR2_WUFH                (I2C_SR2_WUFH_MASK << I2C_WUFH_OFFSET)
+#define I2C_SR2_TIMEOUT_OFFSET      6
+#define I2C_SR2_TIMEOUT_MASK        0x01
+#define I2C_SR2_TIMEOUT             (I2C_SR2_TIMEOUT_MASK << I2C_TIMEOUT_OFFSET)
+#define I2C_SR2_SMBALERT_OFFSET     7
+#define I2C_SR2_SMBALERT_MASK       0x01
+#define I2C_SR2_SMBALERT            (I2C_SR2_SMBALERT_MASK << I2C_SMBALERT_OFFSET)
+// SR3
+#define I2C_SR3_MSL_OFFSET          0
+#define I2C_SR3_MSL_MASK            0x01
+#define I2C_SR3_MSL                 (I2C_SR3_MSL_MASK << I2C_MSL_OFFSET)
+#define I2C_SR3_BUSY_OFFSET         1
+#define I2C_SR3_BUSY_MASK           0x01
+#define I2C_SR3_BUSY                (I2C_SR3_BUSY_MASK << I2C_BUSY_OFFSET)
+#define I2C_SR3_TRA_OFFSET          2
+#define I2C_SR3_TRA_MASK            0x01
+#define I2C_SR3_TRA                 (I2C_SR3_TRA_MASK << I2C_TRA_OFFSET)
+#define I2C_SR3_GENCALL_OFFSET      4
+#define I2C_SR3_GENCALL_MASK        0x01
+#define I2C_SR3_GENCALL             (I2C_SR3_GENCALL_MASK << I2C_GENCALL_OFFSET)
+#define I2C_SR3_SMBDEFAULT_OFFSET   5
+#define I2C_SR3_SMBDEFAULT_MASK     0x01
+#define I2C_SR3_SMBDEFAULT          (I2C_SR3_SMBDEFAULT_MASK << I2C_SMBDEFAULT_OFFSET)
+#define I2C_SR3_SMBHOST_OFFSET      6
+#define I2C_SR3_SMBHOST_MASK        0x01
+#define I2C_SR3_SMBHOST             (I2C_SR3_SMBHOST_MASK << I2C_SMBHOST_OFFSET)
+// ITR
+#define I2C_ITR_ITERREN_OFFSET      0
+#define I2C_ITR_ITERREN_MASK        0x01
+#define I2C_ITR_ITERREN             (I2C_ITR_ITERREN_MASK << I2C_ITERREN_OFFSET)
+#define I2C_ITR_ITEVTEN_OFFSET      1
+#define I2C_ITR_ITEVTEN_MASK        0x01
+#define I2C_ITR_ITEVTEN             (I2C_ITR_ITEVTEN_MASK << I2C_ITEVTEN_OFFSET)
+#define I2C_ITR_ITBUFEN_OFFSET      2
+#define I2C_ITR_ITBUFEN_MASK        0x01
+#define I2C_ITR_ITBUFEN             (I2C_ITR_ITBUFEN_MASK << I2C_ITBUFEN_OFFSET)
+#define I2C_ITR_DMAEN_OFFSET        3
+#define I2C_ITR_DMAEN_MASK          0x01
+#define I2C_ITR_DMAEN               (I2C_ITR_DMAEN_MASK << I2C_DMAEN_OFFSET)
+#define I2C_ITR_LAST_OFFSET         4
+#define I2C_ITR_LAST_MASK           0x01
+#define I2C_ITR_LAST                (I2C_ITR_LAST_MASK << I2C_LAST_OFFSET)
+// CCRL
+#define I2C_CCRL_OFFSET             0
+#define I2C_CCRL_MASK               0xFF
+#define I2C_CCRL                    (I2C_CCRL_MASK << I2C_CCRL_OFFSET)
+// CCRH
+#define I2C_CCRL_CCR_OFFSET         0
+#define I2C_CCRL_CCR_MASK           0x0F
+#define I2C_CCRL_CCR                (I2C_CCRL_CCR_MASK << I2C_CCR_OFFSET)
+#define I2C_CCRL_DUTY_OFFSET        6
+#define I2C_CCRL_DUTY_MASK          0x01
+#define I2C_CCRL_DUTY               (I2C_CCRL_DUTY_MASK << I2C_DUTY_OFFSET)
+#define I2C_CCRL_FS_OFFSET          7
+#define I2C_CCRL_FS_MASK            0x01
+#define I2C_CCRL_FS                 (I2C_CCRL_FS_MASK << I2C_FS_OFFSET)
+// TRISER
+#define I2C_TRISER_OFFSET           0
+#define I2C_TRISER_MASK             0x1F
+#define I2C_TRISER                  (I2C_TRISER_MASK << I2C_TRISER_OFFSET)
+// PECR
+#define I2C_PECR_OFFSET             0
+#define I2C_PECR_MASK               0xFF
+#define I2C_PECR                    (I2C_PECR_MASK << I2C_PECR_OFFSET)
+
+/* =============== RESET ================ */
+// CR
+#define RESET_CR_RSTPIN_KEY0_OFFSET 0
+#define RESET_CR_RSTPIN_KEY0_MASK   0x01
+#define RESET_CR_RSTPIN_KEY0        (RESET_CR_RSTPIN_KEY0_MASK << RESET_RSTPIN_KEY0_OFFSET)
+#define RESET_CR_RSTPIN_KEY1_OFFSET 1
+#define RESET_CR_RSTPIN_KEY1_MASK   0x01
+#define RESET_CR_RSTPIN_KEY1        (RESET_CR_RSTPIN_KEY1_MASK << RESET_RSTPIN_KEY1_OFFSET)
+#define RESET_CR_RSTPIN_KEY2_OFFSET 2
+#define RESET_CR_RSTPIN_KEY2_MASK   0x01
+#define RESET_CR_RSTPIN_KEY2        (RESET_CR_RSTPIN_KEY2_MASK << RESET_RSTPIN_KEY2_OFFSET)
+#define RESET_CR_RSTPIN_KEY3_OFFSET 3
+#define RESET_CR_RSTPIN_KEY3_MASK   0x01
+#define RESET_CR_RSTPIN_KEY3        (RESET_CR_RSTPIN_KEY3_MASK << RESET_RSTPIN_KEY3_OFFSET)
+#define RESET_CR_RSTPIN_KEY4_OFFSET 4
+#define RESET_CR_RSTPIN_KEY4_MASK   0x01
+#define RESET_CR_RSTPIN_KEY4        (RESET_CR_RSTPIN_KEY4_MASK << RESET_RSTPIN_KEY4_OFFSET)
+#define RESET_CR_RSTPIN_KEY5_OFFSET 5
+#define RESET_CR_RSTPIN_KEY5_MASK   0x01
+#define RESET_CR_RSTPIN_KEY5        (RESET_CR_RSTPIN_KEY5_MASK << RESET_RSTPIN_KEY5_OFFSET)
+#define RESET_CR_RSTPIN_KEY6_OFFSET 6
+#define RESET_CR_RSTPIN_KEY6_MASK   0x01
+#define RESET_CR_RSTPIN_KEY6        (RESET_CR_RSTPIN_KEY6_MASK << RESET_RSTPIN_KEY6_OFFSET)
+#define RESET_CR_RSTPIN_KEY7_OFFSET 7
+#define RESET_CR_RSTPIN_KEY7_MASK   0x01
+#define RESET_CR_RSTPIN_KEY7        (RESET_CR_RSTPIN_KEY7_MASK << RESET_RSTPIN_KEY7_OFFSET)
+// SR
+#define RESET_SR_PORF_OFFSET        0
+#define RESET_SR_PORF_MASK          0x01
+#define RESET_SR_PORF               (RESET_SR_PORF_MASK << RESET_PORF_OFFSET)
+#define RESET_SR_IWDGF_OFFSET       1
+#define RESET_SR_IWDGF_MASK         0x01
+#define RESET_SR_IWDGF              (RESET_SR_IWDGF_MASK << RESET_IWDGF_OFFSET)
+#define RESET_SR_ILLOPF_OFFSET      2
+#define RESET_SR_ILLOPF_MASK        0x01
+#define RESET_SR_ILLOPF             (RESET_SR_ILLOPF_MASK << RESET_ILLOPF_OFFSET)
+#define RESET_SR_SWIMF_OFFSET       3
+#define RESET_SR_SWIMF_MASK         0x01
+#define RESET_SR_SWIMF              (RESET_SR_SWIMF_MASK << RESET_SWIMF_OFFSET)
+#define RESET_SR_WWDGF_OFFSET       4
+#define RESET_SR_WWDGF_MASK         0x01
+#define RESET_SR_WWDGF              (RESET_SR_WWDGF_MASK << RESET_WWDGF_OFFSET)
+#define RESET_SR_BORF_OFFSET        5
+#define RESET_SR_BORF_MASK          0x01
+#define RESET_SR_BORF               (RESET_SR_BORF_MASK << RESET_BORF_OFFSET)
+
+/* ================ ADC ================= */
+// CR1
+#define ADC_CR1_ADON_OFFSET         0
+#define ADC_CR1_ADON_MASK           0x01
+#define ADC_CR1_ADON                (ADC_CR1_ADON_MASK << ADC_ADON_OFFSET)
+#define ADC_CR1_START_OFFSET        1
+#define ADC_CR1_START_MASK          0x01
+#define ADC_CR1_START               (ADC_CR1_START_MASK << ADC_START_OFFSET)
+#define ADC_CR1_CONT_OFFSET         2
+#define ADC_CR1_CONT_MASK           0x01
+#define ADC_CR1_CONT                (ADC_CR1_CONT_MASK << ADC_CONT_OFFSET)
+#define ADC_CR1_EOCIE_OFFSET        3
+#define ADC_CR1_EOCIE_MASK          0x01
+#define ADC_CR1_EOCIE               (ADC_CR1_EOCIE_MASK << ADC_EOCIE_OFFSET)
+#define ADC_CR1_AWDIE_OFFSET        4
+#define ADC_CR1_AWDIE_MASK          0x01
+#define ADC_CR1_AWDIE               (ADC_CR1_AWDIE_MASK << ADC_AWDIE_OFFSET)
+#define ADC_CR1_RES_OFFSET          5
+#define ADC_CR1_RES_MASK            0x03
+#define ADC_CR1_RES                 (ADC_CR1_RES_MASK << ADC_RES_OFFSET)
+#define ADC_CR1_OVERIE_OFFSET       7
+#define ADC_CR1_OVERIE_MASK         0x01
+#define ADC_CR1_OVERIE              (ADC_CR1_OVERIE_MASK << ADC_OVERIE_OFFSET)
+// CR2
+#define ADC_CR2_SMTP1_0_OFFSET      0
+#define ADC_CR2_SMTP1_0_MASK        0x01
+#define ADC_CR2_SMTP1_0             (ADC_CR2_SMTP1_0_MASK << ADC_SMTP1_0_OFFSET)
+#define ADC_CR2_SMTP1_1_OFFSET      1
+#define ADC_CR2_SMTP1_1_MASK        0x01
+#define ADC_CR2_SMTP1_1             (ADC_CR2_SMTP1_1_MASK << ADC_SMTP1_1_OFFSET)
+#define ADC_CR2_SMTP1_2_OFFSET      2
+#define ADC_CR2_SMTP1_2_MASK        0x01
+#define ADC_CR2_SMTP1_2             (ADC_CR2_SMTP1_2_MASK << ADC_SMTP1_2_OFFSET)
+#define ADC_CR2_EXTSEL0_OFFSET      3
+#define ADC_CR2_EXTSEL0_MASK        0x01
+#define ADC_CR2_EXTSEL0             (ADC_CR2_EXTSEL0_MASK << ADC_EXTSEL0_OFFSET)
+#define ADC_CR2_EXTSEL1_OFFSET      4
+#define ADC_CR2_EXTSEL1_MASK        0x01
+#define ADC_CR2_EXTSEL1             (ADC_CR2_EXTSEL1_MASK << ADC_EXTSEL1_OFFSET)
+#define ADC_CR2_TRIG_EDGE0_OFFSET   5
+#define ADC_CR2_TRIG_EDGE0_MASK     0x01
+#define ADC_CR2_TRIG_EDGE0          (ADC_CR2_TRIG_EDGE0_MASK << ADC_TRIG_EDGE0_OFFSET)
+#define ADC_CR2_TRIG_EDGE1_OFFSET   6
+#define ADC_CR2_TRIG_EDGE1_MASK     0x01
+#define ADC_CR2_TRIG_EDGE1          (ADC_CR2_TRIG_EDGE1_MASK << ADC_TRIG_EDGE1_OFFSET)
+#define ADC_CR2_PRESC_OFFSET        7
+#define ADC_CR2_PRESC_MASK          0x01
+#define ADC_CR2_PRESC               (ADC_CR2_PRESC_MASK << ADC_PRESC_OFFSET)
+// CR3
+#define ADC_CR3_CHSEL0_OFFSET       0
+#define ADC_CR3_CHSEL0_MASK         0x01
+#define ADC_CR3_CHSEL0              (ADC_CR3_CHSEL0_MASK << ADC_CHSEL0_OFFSET)
+#define ADC_CR3_CHSEL1_OFFSET       1
+#define ADC_CR3_CHSEL1_MASK         0x01
+#define ADC_CR3_CHSEL1              (ADC_CR3_CHSEL1_MASK << ADC_CHSEL1_OFFSET)
+#define ADC_CR3_CHSEL2_OFFSET       2
+#define ADC_CR3_CHSEL2_MASK         0x01
+#define ADC_CR3_CHSEL2              (ADC_CR3_CHSEL2_MASK << ADC_CHSEL2_OFFSET)
+#define ADC_CR3_CHSEL3_OFFSET       3
+#define ADC_CR3_CHSEL3_MASK         0x01
+#define ADC_CR3_CHSEL3              (ADC_CR3_CHSEL3_MASK << ADC_CHSEL3_OFFSET)
+#define ADC_CR3_CHSEL4_OFFSET       4
+#define ADC_CR3_CHSEL4_MASK         0x01
+#define ADC_CR3_CHSEL4              (ADC_CR3_CHSEL4_MASK << ADC_CHSEL4_OFFSET)
+#define ADC_CR3_SMTP2_0_OFFSET      5
+#define ADC_CR3_SMTP2_0_MASK        0x01
+#define ADC_CR3_SMTP2_0             (ADC_CR3_SMTP2_0_MASK << ADC_SMTP2_0_OFFSET)
+#define ADC_CR3_SMTP2_1_OFFSET      6
+#define ADC_CR3_SMTP2_1_MASK        0x01
+#define ADC_CR3_SMTP2_1             (ADC_CR3_SMTP2_1_MASK << ADC_SMTP2_1_OFFSET)
+#define ADC_CR3_SMTP2_2_OFFSET      7
+#define ADC_CR3_SMTP2_2_MASK        0x01
+#define ADC_CR3_SMTP2_2             (ADC_CR3_SMTP2_2_MASK << ADC_SMTP2_2_OFFSET)
+// SR
+#define ADC_SR_EOC_OFFSET           0
+#define ADC_SR_EOC_MASK             0x01
+#define ADC_SR_EOC                  (ADC_SR_EOC_MASK << ADC_EOC_OFFSET)
+#define ADC_SR_AWD_OFFSET           1
+#define ADC_SR_AWD_MASK             0x01
+#define ADC_SR_AWD                  (ADC_SR_AWD_MASK << ADC_AWD_OFFSET)
+#define ADC_SR_OVER_OFFSET          2
+#define ADC_SR_OVER_MASK            0x01
+#define ADC_SR_OVER                 (ADC_SR_OVER_MASK << ADC_OVER_OFFSET)
+// DRH
+#define ADC_DRH_OFFSET              0
+#define ADC_DRH_MASK                0x0F
+#define ADC_DRH                     (ADC_DRH_MASK << ADC_DRH_OFFSET)
+// DRL
+#define ADC_DRL_OFFSET              0
+#define ADC_DRL_MASK                0xFF
+#define ADC_DRL                     (ADC_DRL_MASK << ADC_DRL_OFFSET)
+// HTRH
+#define ADC_HTRH_OFFSET             0
+#define ADC_HTRH_MASK               0x0F
+#define ADC_HTRH                    (ADC_HTRH_MASK << ADC_HTRH_OFFSET)
+// HTRL
+#define ADC_HTRL_OFFSET             0
+#define ADC_HTRL_MASK               0xFF
+#define ADC_HTRL                    (ADC_HTRL_MASK << ADC_HTRL_OFFSET)
+// LTRH
+#define ADC_LTRH_OFFSET             0
+#define ADC_LTRH_MASK               0x0F
+#define ADC_LTRH                    (ADC_LTRH_MASK << ADC_LTRH_OFFSET)
+// LTRL
+#define ADC_LTRL_OFFSET             0
+#define ADC_LTRL_MASK               0xFF
+#define ADC_LTRL                    (ADC_LTRL_MASK << ADC_LTRL_OFFSET)
+// SQR1
+#define ADC_SQR1_CHSEL_S24_OFFSET   0
+#define ADC_SQR1_CHSEL_S24_MASK     0x01
+#define ADC_SQR1_CHSEL_S24          (ADC_SQR1_CHSEL_S24_MASK << ADC_CHSEL_S24_OFFSET)
+#define ADC_SQR1_CHSEL_S25_OFFSET   1
+#define ADC_SQR1_CHSEL_S25_MASK     0x01
+#define ADC_SQR1_CHSEL_S25          (ADC_SQR1_CHSEL_S25_MASK << ADC_CHSEL_S25_OFFSET)
+#define ADC_SQR1_CHSEL_S26_OFFSET   2
+#define ADC_SQR1_CHSEL_S26_MASK     0x01
+#define ADC_SQR1_CHSEL_S26          (ADC_SQR1_CHSEL_S26_MASK << ADC_CHSEL_S26_OFFSET)
+#define ADC_SQR1_CHSEL_S27_OFFSET   3
+#define ADC_SQR1_CHSEL_S27_MASK     0x01
+#define ADC_SQR1_CHSEL_S27          (ADC_SQR1_CHSEL_S27_MASK << ADC_CHSEL_S27_OFFSET)
+#define ADC_SQR1_CHSEL_SVREFINT_OFFSET   4
+#define ADC_SQR1_CHSEL_SVREFINT_MASK     0x01
+#define ADC_SQR1_CHSEL_SVREFINT          (ADC_SQR1_CHSEL_SVREFINT_MASK << ADC_CHSEL_SVREFINT_OFFSET)
+#define ADC_SQR1_CHSEL_STS_OFFSET   5
+#define ADC_SQR1_CHSEL_STS_MASK     0x01
+#define ADC_SQR1_CHSEL_STS          (ADC_SQR1_CHSEL_STS_MASK << ADC_CHSEL_STS_OFFSET)
+#define ADC_SQR1_DMAOFF_OFFSET      7
+#define ADC_SQR1_DMAOFF_MASK        0x01
+#define ADC_SQR1_DMAOFF             (ADC_SQR1_DMAOFF_MASK << ADC_DMAOFF_OFFSET)
+// SQR2
+#define ADC_SQR2_CHSEL_S16_OFFSET   0
+#define ADC_SQR2_CHSEL_S16_MASK     0x01
+#define ADC_SQR2_CHSEL_S16          (ADC_SQR2_CHSEL_S16_MASK << ADC_CHSEL_S16_OFFSET)
+#define ADC_SQR2_CHSEL_S17_OFFSET   1
+#define ADC_SQR2_CHSEL_S17_MASK     0x01
+#define ADC_SQR2_CHSEL_S17          (ADC_SQR2_CHSEL_S17_MASK << ADC_CHSEL_S17_OFFSET)
+#define ADC_SQR2_CHSEL_S18_OFFSET   2
+#define ADC_SQR2_CHSEL_S18_MASK     0x01
+#define ADC_SQR2_CHSEL_S18          (ADC_SQR2_CHSEL_S18_MASK << ADC_CHSEL_S18_OFFSET)
+#define ADC_SQR2_CHSEL_S19_OFFSET   3
+#define ADC_SQR2_CHSEL_S19_MASK     0x01
+#define ADC_SQR2_CHSEL_S19          (ADC_SQR2_CHSEL_S19_MASK << ADC_CHSEL_S19_OFFSET)
+#define ADC_SQR2_CHSEL_S20_OFFSET   4
+#define ADC_SQR2_CHSEL_S20_MASK     0x01
+#define ADC_SQR2_CHSEL_S20          (ADC_SQR2_CHSEL_S20_MASK << ADC_CHSEL_S20_OFFSET)
+#define ADC_SQR2_CHSEL_S21_OFFSET   5
+#define ADC_SQR2_CHSEL_S21_MASK     0x01
+#define ADC_SQR2_CHSEL_S21          (ADC_SQR2_CHSEL_S21_MASK << ADC_CHSEL_S21_OFFSET)
+#define ADC_SQR2_CHSEL_S22_OFFSET   6
+#define ADC_SQR2_CHSEL_S22_MASK     0x01
+#define ADC_SQR2_CHSEL_S22          (ADC_SQR2_CHSEL_S22_MASK << ADC_CHSEL_S22_OFFSET)
+#define ADC_SQR2_CHSEL_S23_OFFSET   7
+#define ADC_SQR2_CHSEL_S23_MASK     0x01
+#define ADC_SQR2_CHSEL_S23          (ADC_SQR2_CHSEL_S23_MASK << ADC_CHSEL_S23_OFFSET)
+// SQR3
+#define ADC_SQR3_CHSEL_S8_OFFSET    0
+#define ADC_SQR3_CHSEL_S8_MASK      0x01
+#define ADC_SQR3_CHSEL_S8           (ADC_SQR3_CHSEL_S8_MASK << ADC_CHSEL_S8_OFFSET)
+#define ADC_SQR3_CHSEL_S9_OFFSET    1
+#define ADC_SQR3_CHSEL_S9_MASK      0x01
+#define ADC_SQR3_CHSEL_S9           (ADC_SQR3_CHSEL_S9_MASK << ADC_CHSEL_S9_OFFSET)
+#define ADC_SQR3_CHSEL_S10_OFFSET   2
+#define ADC_SQR3_CHSEL_S10_MASK     0x01
+#define ADC_SQR3_CHSEL_S10          (ADC_SQR3_CHSEL_S10_MASK << ADC_CHSEL_S10_OFFSET)
+#define ADC_SQR3_CHSEL_S11_OFFSET   3
+#define ADC_SQR3_CHSEL_S11_MASK     0x01
+#define ADC_SQR3_CHSEL_S11          (ADC_SQR3_CHSEL_S11_MASK << ADC_CHSEL_S11_OFFSET)
+#define ADC_SQR3_CHSEL_S12_OFFSET   4
+#define ADC_SQR3_CHSEL_S12_MASK     0x01
+#define ADC_SQR3_CHSEL_S12          (ADC_SQR3_CHSEL_S12_MASK << ADC_CHSEL_S12_OFFSET)
+#define ADC_SQR3_CHSEL_S13_OFFSET   5
+#define ADC_SQR3_CHSEL_S13_MASK     0x01
+#define ADC_SQR3_CHSEL_S13          (ADC_SQR3_CHSEL_S13_MASK << ADC_CHSEL_S13_OFFSET)
+#define ADC_SQR3_CHSEL_S14_OFFSET   6
+#define ADC_SQR3_CHSEL_S14_MASK     0x01
+#define ADC_SQR3_CHSEL_S14          (ADC_SQR3_CHSEL_S14_MASK << ADC_CHSEL_S14_OFFSET)
+#define ADC_SQR3_CHSEL_S15_OFFSET   7
+#define ADC_SQR3_CHSEL_S15_MASK     0x01
+#define ADC_SQR3_CHSEL_S15          (ADC_SQR3_CHSEL_S15_MASK << ADC_CHSEL_S15_OFFSET)
+// SQR4
+#define ADC_SQR4_CHSEL_S0_OFFSET    0
+#define ADC_SQR4_CHSEL_S0_MASK      0x01
+#define ADC_SQR4_CHSEL_S0           (ADC_SQR4_CHSEL_S0_MASK << ADC_CHSEL_S0_OFFSET)
+#define ADC_SQR4_CHSEL_S1_OFFSET    1
+#define ADC_SQR4_CHSEL_S1_MASK      0x01
+#define ADC_SQR4_CHSEL_S1           (ADC_SQR4_CHSEL_S1_MASK << ADC_CHSEL_S1_OFFSET)
+#define ADC_SQR4_CHSEL_S2_OFFSET    2
+#define ADC_SQR4_CHSEL_S2_MASK      0x01
+#define ADC_SQR4_CHSEL_S2           (ADC_SQR4_CHSEL_S2_MASK << ADC_CHSEL_S2_OFFSET)
+#define ADC_SQR4_CHSEL_S3_OFFSET    3
+#define ADC_SQR4_CHSEL_S3_MASK      0x01
+#define ADC_SQR4_CHSEL_S3           (ADC_SQR4_CHSEL_S3_MASK << ADC_CHSEL_S3_OFFSET)
+#define ADC_SQR4_CHSEL_S4_OFFSET    4
+#define ADC_SQR4_CHSEL_S4_MASK      0x01
+#define ADC_SQR4_CHSEL_S4           (ADC_SQR4_CHSEL_S4_MASK << ADC_CHSEL_S4_OFFSET)
+#define ADC_SQR4_CHSEL_S5_OFFSET    5
+#define ADC_SQR4_CHSEL_S5_MASK      0x01
+#define ADC_SQR4_CHSEL_S5           (ADC_SQR4_CHSEL_S5_MASK << ADC_CHSEL_S5_OFFSET)
+#define ADC_SQR4_CHSEL_S6_OFFSET    6
+#define ADC_SQR4_CHSEL_S6_MASK      0x01
+#define ADC_SQR4_CHSEL_S6           (ADC_SQR4_CHSEL_S6_MASK << ADC_CHSEL_S6_OFFSET)
+#define ADC_SQR4_CHSEL_S7_OFFSET    7
+#define ADC_SQR4_CHSEL_S7_MASK      0x01
+#define ADC_SQR4_CHSEL_S7           (ADC_SQR4_CHSEL_S7_MASK << ADC_CHSEL_S7_OFFSET)
+// TRIGR1
+#define ADC_TRIGR1_TRIG24_OFFSET    0
+#define ADC_TRIGR1_TRIG24_MASK      0x01
+#define ADC_TRIGR1_TRIG24           (ADC_TRIGR1_TRIG24_MASK << ADC_TRIG24_OFFSET)
+#define ADC_TRIGR1_TRIG25_OFFSET    1
+#define ADC_TRIGR1_TRIG25_MASK      0x01
+#define ADC_TRIGR1_TRIG25           (ADC_TRIGR1_TRIG25_MASK << ADC_TRIG25_OFFSET)
+#define ADC_TRIGR1_TRIG26_OFFSET    2
+#define ADC_TRIGR1_TRIG26_MASK      0x01
+#define ADC_TRIGR1_TRIG26           (ADC_TRIGR1_TRIG26_MASK << ADC_TRIG26_OFFSET)
+#define ADC_TRIGR1_TRIG27_OFFSET    3
+#define ADC_TRIGR1_TRIG27_MASK      0x01
+#define ADC_TRIGR1_TRIG27           (ADC_TRIGR1_TRIG27_MASK << ADC_TRIG27_OFFSET)
+#define ADC_TRIGR1_VREFINTON_OFFSET 4
+#define ADC_TRIGR1_VREFINTON_MASK   0x01
+#define ADC_TRIGR1_VREFINTON        (ADC_TRIGR1_VREFINTON_MASK << ADC_TRIGR1_VREFINTON_OFFSET)
+#define ADC_TRIGR1_TSON_OFFSET      5
+#define ADC_TRIGR1_TSON_MASK        0x01
+#define ADC_TRIGR1_TSON             (ADC_TRIGR1_TSON_MASK << ADC_TRIGR1_TSON_OFFSET)
+
+// TRIGR2
+#define ADC_TRIGR2_TRIG16_OFFSET    0
+#define ADC_TRIGR2_TRIG16_MASK      0x01
+#define ADC_TRIGR2_TRIG16           (ADC_TRIGR2_TRIG16_MASK << ADC_TRIG16_OFFSET)
+#define ADC_TRIGR2_TRIG17_OFFSET    1
+#define ADC_TRIGR2_TRIG17_MASK      0x01
+#define ADC_TRIGR2_TRIG17           (ADC_TRIGR2_TRIG17_MASK << ADC_TRIG17_OFFSET)
+#define ADC_TRIGR2_TRIG18_OFFSET    2
+#define ADC_TRIGR2_TRIG18_MASK      0x01
+#define ADC_TRIGR2_TRIG18           (ADC_TRIGR2_TRIG18_MASK << ADC_TRIG18_OFFSET)
+#define ADC_TRIGR2_TRIG19_OFFSET    3
+#define ADC_TRIGR2_TRIG19_MASK      0x01
+#define ADC_TRIGR2_TRIG19           (ADC_TRIGR2_TRIG19_MASK << ADC_TRIG19_OFFSET)
+#define ADC_TRIGR2_TRIG20_OFFSET    4
+#define ADC_TRIGR2_TRIG20_MASK      0x01
+#define ADC_TRIGR2_TRIG20           (ADC_TRIGR2_TRIG20_MASK << ADC_TRIG20_OFFSET)
+#define ADC_TRIGR2_TRIG21_OFFSET    5
+#define ADC_TRIGR2_TRIG21_MASK      0x01
+#define ADC_TRIGR2_TRIG21           (ADC_TRIGR2_TRIG21_MASK << ADC_TRIG21_OFFSET)
+#define ADC_TRIGR2_TRIG22_OFFSET    6
+#define ADC_TRIGR2_TRIG22_MASK      0x01
+#define ADC_TRIGR2_TRIG22           (ADC_TRIGR2_TRIG22_MASK << ADC_TRIG22_OFFSET)
+#define ADC_TRIGR2_TRIG23_OFFSET    7
+#define ADC_TRIGR2_TRIG23_MASK      0x01
+#define ADC_TRIGR2_TRIG23           (ADC_TRIGR2_TRIG23_MASK << ADC_TRIG23_OFFSET)
+// TRIGR3
+#define ADC_TRIGR3_TRIG8_OFFSET     0
+#define ADC_TRIGR3_TRIG8_MASK       0x01
+#define ADC_TRIGR3_TRIG8            (ADC_TRIGR3_TRIG8_MASK << ADC_TRIG8_OFFSET)
+#define ADC_TRIGR3_TRIG9_OFFSET     1
+#define ADC_TRIGR3_TRIG9_MASK       0x01
+#define ADC_TRIGR3_TRIG9            (ADC_TRIGR3_TRIG9_MASK << ADC_TRIG9_OFFSET)
+#define ADC_TRIGR3_TRIG10_OFFSET    2
+#define ADC_TRIGR3_TRIG10_MASK      0x01
+#define ADC_TRIGR3_TRIG10           (ADC_TRIGR3_TRIG10_MASK << ADC_TRIG10_OFFSET)
+#define ADC_TRIGR3_TRIG11_OFFSET    3
+#define ADC_TRIGR3_TRIG11_MASK      0x01
+#define ADC_TRIGR3_TRIG11           (ADC_TRIGR3_TRIG11_MASK << ADC_TRIG11_OFFSET)
+#define ADC_TRIGR3_TRIG12_OFFSET    4
+#define ADC_TRIGR3_TRIG12_MASK      0x01
+#define ADC_TRIGR3_TRIG12           (ADC_TRIGR3_TRIG12_MASK << ADC_TRIG12_OFFSET)
+#define ADC_TRIGR3_TRIG13_OFFSET    5
+#define ADC_TRIGR3_TRIG13_MASK      0x01
+#define ADC_TRIGR3_TRIG13           (ADC_TRIGR3_TRIG13_MASK << ADC_TRIG13_OFFSET)
+#define ADC_TRIGR3_TRIG14_OFFSET    6
+#define ADC_TRIGR3_TRIG14_MASK      0x01
+#define ADC_TRIGR3_TRIG14           (ADC_TRIGR3_TRIG14_MASK << ADC_TRIG14_OFFSET)
+#define ADC_TRIGR3_TRIG15_OFFSET    7
+#define ADC_TRIGR3_TRIG15_MASK      0x01
+#define ADC_TRIGR3_TRIG15           (ADC_TRIGR3_TRIG15_MASK << ADC_TRIG15_OFFSET)
+// TRIGR4
+#define ADC_TRIGR4_TRIG0_OFFSET     0
+#define ADC_TRIGR4_TRIG0_MASK       0x01
+#define ADC_TRIGR4_TRIG0            (ADC_TRIGR4_TRIG0_MASK << ADC_TRIG0_OFFSET)
+#define ADC_TRIGR4_TRIG1_OFFSET     1
+#define ADC_TRIGR4_TRIG1_MASK       0x01
+#define ADC_TRIGR4_TRIG1            (ADC_TRIGR4_TRIG1_MASK << ADC_TRIG1_OFFSET)
+#define ADC_TRIGR4_TRIG2_OFFSET     2
+#define ADC_TRIGR4_TRIG2_MASK       0x01
+#define ADC_TRIGR4_TRIG2            (ADC_TRIGR4_TRIG2_MASK << ADC_TRIG2_OFFSET)
+#define ADC_TRIGR4_TRIG3_OFFSET     3
+#define ADC_TRIGR4_TRIG3_MASK       0x01
+#define ADC_TRIGR4_TRIG3            (ADC_TRIGR4_TRIG3_MASK << ADC_TRIG3_OFFSET)
+#define ADC_TRIGR4_TRIG4_OFFSET     4
+#define ADC_TRIGR4_TRIG4_MASK       0x01
+#define ADC_TRIGR4_TRIG4            (ADC_TRIGR4_TRIG4_MASK << ADC_TRIG4_OFFSET)
+#define ADC_TRIGR4_TRIG5_OFFSET     5
+#define ADC_TRIGR4_TRIG5_MASK       0x01
+#define ADC_TRIGR4_TRIG5            (ADC_TRIGR4_TRIG5_MASK << ADC_TRIG5_OFFSET)
+#define ADC_TRIGR4_TRIG6_OFFSET     6
+#define ADC_TRIGR4_TRIG6_MASK       0x01
+#define ADC_TRIGR4_TRIG6            (ADC_TRIGR4_TRIG6_MASK << ADC_TRIG6_OFFSET)
+#define ADC_TRIGR4_TRIG7_OFFSET     7
+#define ADC_TRIGR4_TRIG7_MASK       0x01
+#define ADC_TRIGR4_TRIG7            (ADC_TRIGR4_TRIG7_MASK << ADC_TRIG7_OFFSET)
+
+
+
 
 #endif
