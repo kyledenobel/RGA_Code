@@ -23,10 +23,15 @@
 
 # Makefile for STM8 compliation with sdcc
 
-# variable definitions
-main_file := 
+# build path
+build_path := build
 
-objects := 
+source_path := src
+
+# variable definitions
+main_file := $(source_path)/
+
+objects := $(build_path)/
 
 # path objects are inlcuded via -I<path_name>
 include_path := -Iinc/stm -Iinc
