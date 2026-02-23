@@ -1,7 +1,7 @@
-// ==================================
-//  Register Define File STM8L152K4T6
-//  Author: Kyle de Nobel
-// ===================================
+// =================================== //
+//  Register Define File STM8L152K4T6  //
+//  Author: Kyle de Nobel              // 
+// =================================== //
 
 
 #ifndef STM8L152K4T6_H
