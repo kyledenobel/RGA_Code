@@ -68,11 +68,11 @@ typedef struct {
 
 
 /* ============== Function Defines ============== */
-error_t init_pin();
+error_t init_pin(void);
 
-uint8_t read_pin();
+uint8_t read_pin(void);
 
-void write_pin();
+void write_pin(void);
 
 
 #endif

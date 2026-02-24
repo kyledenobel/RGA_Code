@@ -9,6 +9,7 @@
 #include "stdint.h"
 
 typedef enum {
+    OK = (int8_t) 0,
     INVALID_ARG = (int8_t) (-1)
 } error_t;
 

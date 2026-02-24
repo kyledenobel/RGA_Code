@@ -25,7 +25,7 @@
  */
 #define WRITE_REG(REG, DATA)    (REG = DATA)
 
-#include "STM8L152.h"
+//#include "STM8L152.h"
 
 /* ===================================== */
 /* ======== peripheral typedefs ======== */

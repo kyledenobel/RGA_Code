@@ -28,20 +28,25 @@ build_path := build
 
 source_path := src
 
-# variable definitions
-main_file := $(source_path)/
+library_path := lib/src
 
-objects := $(build_path)/
+# variable definitions
+main_file := $(source_path)/main.c
+
+library := $(library_path)/gpio.c
+
+objects := $(build_path)/gpio.rel
+
 
 # path objects are inlcuded via -I<path_name>
-include_path := -Iinc/stm -Iinc -Ilib/inc
+include_path := -Iinc/stm -Iinc -Ilib/inc -Ilib
 
 # include macros with -D
 # for fast speed --opt-code-speed
 # for small size --opt-code-siz
-flags := --std-c11 -mstm8
+flags := --std-c11 -mstm8 --out-fmt-elf
 
-binary_target := firmware.hex
+binary_target := $(build_path)/firmware.elf
 
 
 .PHONY: help
@@ -62,15 +67,26 @@ verify:
 .PHONY: build
 build: $(binary_target)
 
+.PHONY: flash
 flash: $(binary_target)
-	STVP_CmdLine -BoardName=ST-Link -Tool_ID=0 -ProgMode=SWIM -verbose -progress -erase -FileProg=$(binary_target) -verify
+	STVP_CmdLine \
+	-BoardName=ST-Link \
+	-Tool_ID=0 \
+	-Port=USB \
+	-ProgMode=SWIM \
+	-Device=STM8L15xK4 \
+	-verbose \
+	-progress \
+	-erase \
+	-FileProg=$(binary_target) \
+	-verify
 
 
 
 # recipes for each file
 
-firmware.hex: $(objects)
-	sdcc $(main_file) $(objects) -o firmware.hex
+$(binary_target): $(objects)
+	sdcc $(main_file) $(objects) $(flags) $(include_path) -o $(build_path)/firmware.elf
 
 
 # NOTE: Page 31 of https://sdcc.sourceforge.net/doc/sdccman.pdf
@@ -78,4 +94,8 @@ firmware.hex: $(objects)
 # complile all non-main files then link them together when you compile main
 # example on page 31
 # linked files are .rel extension
+
+
+$(build_path)/gpio.rel: lib/inc/gpio.h
+	sdcc $(library_path)/gpio.c $(flags) -c $(include_path) -o $(build_path)/gpio.rel
 

@@ -12,6 +12,14 @@ settings.json
 *.lo
 *.o
 *.obj
+*.elf
+*.asm
+*.lk
+*.lst
+*.map
+*.rel
+*.rst
+*.sym
 
 # Precompiled Headers
 *.gch
