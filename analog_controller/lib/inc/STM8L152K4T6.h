@@ -25,6 +25,11 @@
  */
 #define WRITE_REG(REG, DATA)    (REG = DATA)
 
+/**
+ * @brief Reads a bit from a register
+ */
+#define READ_BIT(REG, BIT)      (REG & BIT)
+
 //#include "STM8L152.h"
 
 /* ===================================== */

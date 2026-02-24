@@ -57,27 +57,33 @@ binary_target := $(build_path)/firmware.elf
 help:
 	$(info | ================================================================ |)
 	$(info | commands list                                                    |)
-	$(info |    make help   => brings up this command list                    |)
-	$(info |    make verify => runs a version check for the compliler         |)
-	$(info |    make flash  => flashes the hex to the target                  |)
-	$(info |    make build  => builds the hex"                                |)
-	$(info |    make clean  => removes all build artifacts                    |)
+	$(info |    make help          => brings up this command list             |)
+	$(info |    make verify        => runs a version check for the compliler  |)
+	$(info |    make flash         => flashes the hex to the target           |)
+	$(info |    make flash-nucleo  => flashes the hex to the target           |)
+	$(info |    make build         => builds the elf binary target            |)
+	$(info |    make clean         => removes all build artifacts             |)
 	$(info | ================================================================ |)
+
 
 .PHONY: verify
 verify:
 	sdcc -v
 	STVP_CmdLine -help
 
+
 .PHONY: build
 build: $(binary_target)
+
 
 .PHONY: clean
 clean:
 	$(info removing all build artifacts)
 	rm $(build_path)/*.*
+	rm *.log
 	touch $(build_path)/marco.txt
 	echo "HERE SO BUILD FOLDER SHOWS UP IN GIT. ALSO FUNNY" > $(build_path)/marco.txt
+
 
 .PHONY: flash
 flash: $(binary_target)
@@ -91,7 +97,23 @@ flash: $(binary_target)
 	-progress \
 	-erase \
 	-FileProg=$(binary_target) \
-	-verify
+	-verif
+
+
+.PHONY: flash-nucleo
+flash-nucleo: $(binary_target)
+	STVP_CmdLine \
+	-BoardName=ST-Link \
+	-Tool_ID=0 \
+	-Port=USB \
+	-ProgMode=SWIM \
+	-Device=STM8L15xR8 \
+	-verbose \
+	-progress \
+	-erase \
+	-FileProg=$(binary_target) \
+	-verif
+
 
 
 
