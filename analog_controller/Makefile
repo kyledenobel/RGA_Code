@@ -34,7 +34,7 @@ main_file := $(source_path)/
 objects := $(build_path)/
 
 # path objects are inlcuded via -I<path_name>
-include_path := -Iinc/stm -Iinc
+include_path := -Iinc/stm -Iinc -Ilib/inc
 
 # include macros with -D
 # for fast speed --opt-code-speed
