@@ -5,7 +5,7 @@ error_t init_pin(void) {
 }
 
 uint8_t read_pin(void) {
-    return 0;
+    return 1;
 }
 
 void write_pin(void) {

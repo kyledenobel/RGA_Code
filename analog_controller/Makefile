@@ -30,6 +30,8 @@ source_path := src
 
 library_path := lib/src
 
+library_include_path := lib/inc
+
 # variable definitions
 main_file := $(source_path)/main.c
 
@@ -46,18 +48,21 @@ include_path := -Iinc/stm -Iinc -Ilib/inc -Ilib
 # for small size --opt-code-siz
 flags := --std-c11 -mstm8 --out-fmt-elf
 
+lib_flags := $(flags) -c
+
 binary_target := $(build_path)/firmware.elf
 
 
 .PHONY: help
 help:
-	$(info | ==============================================================)
-	$(info | commands list)
-	$(info | 	make help   => brings up this command list)
-	$(info |	make verify => runs a version check for the compliler)
-	$(info |	make flash  => flashes the hex to the target)
-	$(info |	make build  => builds the hex")
-	$(info | ==============================================================)
+	$(info | ================================================================ |)
+	$(info | commands list                                                    |)
+	$(info |    make help   => brings up this command list                    |)
+	$(info |    make verify => runs a version check for the compliler         |)
+	$(info |    make flash  => flashes the hex to the target                  |)
+	$(info |    make build  => builds the hex"                                |)
+	$(info |    make clean  => removes all build artifacts                    |)
+	$(info | ================================================================ |)
 
 .PHONY: verify
 verify:
@@ -66,6 +71,13 @@ verify:
 
 .PHONY: build
 build: $(binary_target)
+
+.PHONY: clean
+clean:
+	$(info removing all build artifacts)
+	rm $(build_path)/*.*
+	touch $(build_path)/marco.txt
+	echo "HERE SO BUILD FOLDER SHOWS UP IN GIT. ALSO FUNNY" > $(build_path)/marco.txt
 
 .PHONY: flash
 flash: $(binary_target)
@@ -96,6 +108,6 @@ $(binary_target): $(objects)
 # linked files are .rel extension
 
 
-$(build_path)/gpio.rel: lib/inc/gpio.h
-	sdcc $(library_path)/gpio.c $(flags) -c $(include_path) -o $(build_path)/gpio.rel
+$(build_path)/gpio.rel: $(library_include_path)/gpio.h
+	sdcc $(library_path)/gpio.c $(lib_flags) $(include_path) -o $(build_path)/gpio.rel
 
