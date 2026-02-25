@@ -1,5 +1,10 @@
+#ifndef INTERRUPT_H
+#define INTERRUPT_H
+
 /**
  * @brief contains interrupt handlers for all STM8L152K4T6 interrupts
+ * @note all interrupts must be seen by main.c, so if moved out of this file
+ *          they must be included in a header that is included by main.c
  */
 
 
@@ -24,61 +29,6 @@ void DMA_23_interrupt(void) __interrupt (3)
 }
 
 void RTC_interrupt(void) __interrupt (4)
-{
-    // Not Implemented
-}
-
-void EXTI_EF_PVD_interrupt(void) __interrupt (5)
-{
-    // Not Implemented
-}
-
-void EXTI_BG_interrupt(void) __interrupt (6)
-{
-    // Not Implemented
-}
-
-void EXTI_DH_interrupt(void) __interrupt (7)
-{
-    // Not Implemented
-}
-
-void EXTI0_interrupt(void) __interrupt (8)
-{
-    // Not Implemented
-}
-
-void EXTI1_interrupt(void) __interrupt (9)
-{
-    // Not Implemented
-}
-
-void EXTI2_interrupt(void) __interrupt (10)
-{
-    // Not Implemented
-}
-
-void EXTI3_interrupt(void) __interrupt (11)
-{
-    // Not Implemented
-}
-
-void EXTI4_interrupt(void) __interrupt (12)
-{
-    // Not Implemented
-}
-
-void EXTI5_interrupt(void) __interrupt (13)
-{
-    // Not Implemented
-}
-
-void EXTI6_interrupt(void) __interrupt (14)
-{
-    // Not Implemented
-}
-
-void EXTI7_interrupt(void) __interrupt (15)
 {
     // Not Implemented
 }
@@ -152,3 +102,6 @@ void I2C_interrupt(void) __interrupt (29)
 {
     // Not Implemented
 }
+
+
+#endif
