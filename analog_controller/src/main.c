@@ -11,11 +11,11 @@ int main(void)
                         .cr2 = INPUT_INT_EN___OUTPUT_HIGH_SPEED};
 
 
-    init_pin(&pA0, &init);
+    gpio_pin_init(&pA0, &init);
 
     while (true)
     {
-        write_pin(&pA0, 1);
+        gpio_write_pin(&pA0, 1);
     }
     
 }

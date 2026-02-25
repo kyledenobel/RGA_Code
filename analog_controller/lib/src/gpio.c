@@ -1,6 +1,11 @@
 #include "gpio.h"
 #include "stddef.h"
 
+// Setup for keeping track of interrupts
+#define GPIO_NUM                                8
+gpio_interrupt_t gpio_interrupt_handler_arr[GPIO_NUM];
+
+
 /* ====================================================== */
 /* ===================== HELPER MACROS ================== */
 /* ====================================================== */
@@ -55,11 +60,21 @@
              (cr2 == INPUT_INT_EN___OUTPUT_HIGH_SPEED))
 
 
+/**
+ * @brief checks if the edge selection if valid for GPIO
+ * @param edge GPIO edge selection for an interrupt
+ */
+#define VALID_EDGE(edge) \
+            ((edge == GPIO_LOW_LEVEL) ||\
+             (edge == GPIO_RISING_EDGE) ||\
+             (edge == GPIO_FALLING_EDGE) ||\
+             (edge == GPIO_BOTH_EDGES))
+
 /* ====================================================== */
 /* ================== FUNCTION DEFINTIONS =============== */
 /* ====================================================== */
 
-error_t init_pin(gpio_t* gpio, gpio_init_t* init) {
+error_t gpio_pin_init(gpio_t* gpio, gpio_init_t* init) {
     /* check params */
     if((gpio == NULL) || (init == NULL)) {
         return NULL_POINTER;
@@ -92,11 +107,11 @@ error_t init_pin(gpio_t* gpio, gpio_init_t* init) {
     return OK;
 }
 
-bool read_pin(gpio_t* gpio) {
+bool gpio_read_pin(gpio_t* gpio) {
     return (bool) READ_BIT(gpio->port->IDR, gpio->pin);
 }
 
-void write_pin(gpio_t* gpio, bool value) {
+void gpio_write_pin(gpio_t* gpio, bool value) {
     if(value) {
         SET_BIT(gpio->port->ODR, gpio->pin);
     }
@@ -105,3 +120,133 @@ void write_pin(gpio_t* gpio, bool value) {
     }
 }
 
+error_t gpio_init_callback(gpio_callback_init_t* init) {
+    /* check valid initialization struct */
+    if((init == NULL) || (init->interrupt)) {
+        return NULL_POINTER;
+    }
+    if(!VALID_PIN(init->pin)) {
+        return INVALID_ARG;
+    }
+    if(!VALID_EDGE(init->edge)) {
+        return INVALID_ARG;
+    }
+    /* config registers */
+    uint8_t pos = init->pin;
+    for(uint8_t i = 0; i < 4; i++) {
+        pos = pos >> 1;
+        if(pos == 0) {
+            SET_BIT(EXTI->CR1, (init->edge) << (i << 1));
+            gpio_interrupt_handler_arr[i] = init->interrupt;
+            break;
+        }
+    }
+    if(pos != 0) {
+        for(uint8_t i = 0; i < 4; i++) {
+            pos = pos >> 1;
+            if(pos == 0) {
+                SET_BIT(EXTI->CR2, (init->edge) << (i << 1));
+                gpio_interrupt_handler_arr[i + 4] = init->interrupt;
+                break;
+            }
+        }
+    }
+
+    return OK;
+}
+
+
+inline void exti_interrupt_helper(pin) {
+    /* clear interrupt */
+    SET_BIT(EXTI->SR1, (1 << pin));
+    /* get handler */
+    gpio_interrupt_handler_arr[pin]();
+}
+
+/**
+ * @brief interrupt for ALL PORT E and F pins
+ */
+void EXTI_EF_PVD_interrupt(void) __interrupt (5)
+{
+    // Not Implemented
+}
+
+/**
+ * @brief interrupt for ALL PORT B pins
+ */
+void EXTI_BG_interrupt(void) __interrupt (6)
+{
+    // Not Implemented
+}
+
+/**
+ * @brief interrupt for ALL PORT D pins
+ */
+void EXTI_DH_interrupt(void) __interrupt (7)
+{
+    // Not Implemented
+}
+
+/**
+ * @brief interrupt for pin 0 on all ports
+ */
+void EXTI0_interrupt(void) __interrupt (8)
+{
+    exti_interrupt_helper(0);
+}
+
+/**
+ * @brief interrupt for pin 1 on all ports
+ */
+void EXTI1_interrupt(void) __interrupt (9)
+{
+    exti_interrupt_helper(1);
+}
+
+/**
+ * @brief interrupt for pin 2 on all ports
+ */
+void EXTI2_interrupt(void) __interrupt (10)
+{
+    exti_interrupt_helper(2);
+}
+
+/**
+ * @brief interrupt for pin 3 on all ports
+ */
+void EXTI3_interrupt(void) __interrupt (11)
+{
+    exti_interrupt_helper(3);
+}
+
+/**
+ * @brief interrupt for pin 4 on all ports
+ */
+void EXTI4_interrupt(void) __interrupt (12)
+{
+    exti_interrupt_helper(4);
+}
+
+/**
+ * @brief interrupt for pin 5 on all ports
+ */
+void EXTI5_interrupt(void) __interrupt (13)
+{
+    exti_interrupt_helper(5);
+}
+
+/**
+ * @brief interrupt for pin 6 on all ports
+ */
+void EXTI6_interrupt(void) __interrupt (14)
+{
+    exti_interrupt_helper(6);
+}
+
+/**
+ * @brief interrupt for pin 7 on all ports
+ */
+void EXTI7_interrupt(void) __interrupt (15)
+{
+    exti_interrupt_helper(7);
+}
