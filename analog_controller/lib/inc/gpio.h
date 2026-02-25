@@ -80,7 +80,7 @@ typedef struct {
 
 /**
  * @brief initializes a GPIO pin
- * @param[in] gpio un-initialized gpio struct
+ * @param[out] gpio un-initialized gpio struct
  * @param[in] init pointer to a filled initialization struct
  * @retval NULL_POINTER -> if either input is NULL
  * @retval INVALID_ARG -> if invalid arguments are passed through init

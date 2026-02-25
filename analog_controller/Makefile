@@ -80,6 +80,7 @@ build: $(binary_target)
 clean:
 	$(info removing all build artifacts)
 	rm $(build_path)/*.*
+	touch marco.log
 	rm *.log
 	touch $(build_path)/marco.txt
 	echo "HERE SO BUILD FOLDER SHOWS UP IN GIT. ALSO FUNNY" > $(build_path)/marco.txt
