@@ -21,6 +21,7 @@ settings.json
 *.rst
 *.sym
 *.log
+*.ihx
 
 # Precompiled Headers
 *.gch

@@ -46,11 +46,11 @@ include_path := -Iinc/stm -Iinc -Ilib/inc -Ilib
 # include macros with -D
 # for fast speed --opt-code-speed
 # for small size --opt-code-siz
-flags := --std-c11 -mstm8 --out-fmt-elf
+flags := --std-c11 -mstm8 #--out-fmt-elf
 
 lib_flags := $(flags) -c
 
-binary_target := $(build_path)/firmware.elf
+binary_target := $(build_path)/firmware.ihx
 
 
 .PHONY: help
@@ -88,7 +88,7 @@ clean:
 .PHONY: flash
 flash: $(binary_target)
 	STVP_CmdLine \
-	-BoardName=ST-Link \
+	-BoardName=ST-LINK \
 	-Tool_ID=0 \
 	-Port=USB \
 	-ProgMode=SWIM \
@@ -120,7 +120,7 @@ flash-nucleo: $(binary_target)
 # recipes for each file
 
 $(binary_target): $(objects)
-	sdcc $(main_file) $(objects) $(flags) $(include_path) -o $(build_path)/firmware.elf
+	sdcc $(main_file) $(objects) $(flags) $(include_path) -o $(binary_target)
 
 
 # NOTE: Page 31 of https://sdcc.sourceforge.net/doc/sdccman.pdf
