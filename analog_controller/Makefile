@@ -104,7 +104,7 @@ flash: $(binary_target)
 .PHONY: flash-nucleo
 flash-nucleo: $(binary_target)
 	STVP_CmdLine \
-	-BoardName=ST-Link \
+	-BoardName=ST-LINK \
 	-Tool_ID=0 \
 	-Port=USB \
 	-ProgMode=SWIM \
