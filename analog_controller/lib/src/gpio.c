@@ -14,11 +14,11 @@ gpio_interrupt_t gpio_interrupt_handler_arr[GPIO_NUM];
  * @param port a GPIO port
  */
 #define VALID_PORT(port) \
-            ((port == GPIO_PORT_A) || \
-            (port == GPIO_PORT_B) || \
-            (port == GPIO_PORT_C) || \
-            (port == GPIO_PORT_D) || \
-            (port == GPIO_PORT_E) || \
+            ((port == GPIO_PORT_A) ||\
+            (port == GPIO_PORT_B) ||\
+            (port == GPIO_PORT_C) ||\
+            (port == GPIO_PORT_D) ||\
+            (port == GPIO_PORT_E) ||\
             (port == GPIO_PORT_F))
 
 /**
