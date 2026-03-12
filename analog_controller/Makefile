@@ -46,11 +46,13 @@ include_path := -Iinc/stm -Iinc -Ilib/inc -Ilib
 # include macros with -D
 # for fast speed --opt-code-speed
 # for small size --opt-code-siz
-flags := --std-c11 -mstm8 #--out-fmt-elf
+flags := --std-c11 -mstm8 --out-fmt-s19 #--out-fmt-elf
 
 lib_flags := $(flags) -c
 
-binary_target := $(build_path)/firmware.ihx
+binary_target := $(build_path)/firmware.s19
+
+openocd_cfg_script := cfg/stm8l152-stlink-swd.cfg
 
 
 .PHONY: help
@@ -115,13 +117,27 @@ flash-nucleo: $(binary_target)
 	-FileProg=$(binary_target) \
 	-verif
 
+.PHONY: flash-ocd
+flash-ocd: $(binary_target)
+	openocd -f $(openocd_cfg_script) \
+		-c "init" \
+		-c "reset halt" \
+		-c "program $< verify reset exit"
+
 
 
 
 # recipes for each file
 
-$(binary_target): $(objects)
-	sdcc $(main_file) $(objects) $(flags) $(include_path) -o $(binary_target)
+$(binary_target): #$(objects)
+	cxstm8 +mods0 -l -co./build -i./lib/inc ./src/main.c
+	cxstm8 +mods0 -l -co./build -i./lib/inc ./lib/src/interrupt.c
+	cxstm8 +mods0 -l -co./build -i./lib/inc ./lib/src/vector.c
+
+	clnk -o ./build/firmware.sm8 ./cfg/analog_controller.lkf
+	chex -fm ./build/firmware.sm8 > build/firmware.s19
+# sdcc $(main_file) $(objects) $(flags) $(include_path) -o build/firmware.s19
+# 	packihx build/firmware.ihx > $(binary_target)
 
 
 # NOTE: Page 31 of https://sdcc.sourceforge.net/doc/sdccman.pdf

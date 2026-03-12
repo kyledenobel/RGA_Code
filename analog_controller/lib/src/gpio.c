@@ -76,18 +76,18 @@ gpio_interrupt_t gpio_interrupt_handler_arr[GPIO_NUM];
 
 error_t gpio_pin_init(gpio_t* gpio, gpio_init_t* init) {
     /* check params */
-    if((gpio == NULL) || (init == NULL)) {
-        return NULL_POINTER;
-    }
-    if((!VALID_PORT(init->port)) || (!VALID_PIN(init->pin))) {
-        return INVALID_ARG;
-    }
-    if(!VALID_DIR(init->dir)) {
-        return INVALID_ARG;
-    }
-    if((!VALID_CR1(init->cr1)) || (!VALID_CR2(init->cr2))) {
-        return INVALID_ARG;
-    }
+    // if((gpio == NULL) || (init == NULL)) {
+    //     return NULL_POINTER;
+    // }
+    // if((!VALID_PORT(init->port)) || (!VALID_PIN(init->pin))) {
+    //     return INVALID_ARG;
+    // }
+    // if(!VALID_DIR(init->dir)) {
+    //     return INVALID_ARG;
+    // }
+    // if((!VALID_CR1(init->cr1)) || (!VALID_CR2(init->cr2))) {
+    //     return INVALID_ARG;
+    // }
 
     /* initialize gpio struct */
     gpio->port = (gpio_typedef_t*) init->port;
@@ -156,7 +156,7 @@ error_t gpio_init_callback(gpio_callback_init_t* init) {
 }
 
 
-inline void exti_interrupt_helper(pin) {
+@inline void exti_interrupt_helper(pin) {
     /* clear interrupt */
     SET_BIT(EXTI->SR1, (1 << pin));
     /* get handler */
@@ -166,7 +166,7 @@ inline void exti_interrupt_helper(pin) {
 /**
  * @brief interrupt for ALL PORT E and F pins
  */
-void EXTI_EF_PVD_interrupt(void) __interrupt (5)
+@interrupt void EXTI_EF_PVD_interrupt(void) //__interrupt (5)
 {
     // Not Implemented
 }
@@ -174,7 +174,7 @@ void EXTI_EF_PVD_interrupt(void) __interrupt (5)
 /**
  * @brief interrupt for ALL PORT B pins
  */
-void EXTI_BG_interrupt(void) __interrupt (6)
+@interrupt void EXTI_BG_interrupt(void) //__interrupt (6)
 {
     // Not Implemented
 }
@@ -182,7 +182,7 @@ void EXTI_BG_interrupt(void) __interrupt (6)
 /**
  * @brief interrupt for ALL PORT D pins
  */
-void EXTI_DH_interrupt(void) __interrupt (7)
+@interrupt void EXTI_DH_interrupt(void) //__interrupt (7)
 {
     // Not Implemented
 }
@@ -190,7 +190,7 @@ void EXTI_DH_interrupt(void) __interrupt (7)
 /**
  * @brief interrupt for pin 0 on all ports
  */
-void EXTI0_interrupt(void) __interrupt (8)
+@interrupt void EXTI0_interrupt(void) //__interrupt (8)
 {
     exti_interrupt_helper(0);
 }
@@ -198,7 +198,7 @@ void EXTI0_interrupt(void) __interrupt (8)
 /**
  * @brief interrupt for pin 1 on all ports
  */
-void EXTI1_interrupt(void) __interrupt (9)
+@interrupt void EXTI1_interrupt(void) //__interrupt (9)
 {
     exti_interrupt_helper(1);
 }
@@ -206,7 +206,7 @@ void EXTI1_interrupt(void) __interrupt (9)
 /**
  * @brief interrupt for pin 2 on all ports
  */
-void EXTI2_interrupt(void) __interrupt (10)
+@interrupt void EXTI2_interrupt(void) //__interrupt (10)
 {
     exti_interrupt_helper(2);
 }
@@ -214,7 +214,7 @@ void EXTI2_interrupt(void) __interrupt (10)
 /**
  * @brief interrupt for pin 3 on all ports
  */
-void EXTI3_interrupt(void) __interrupt (11)
+@interrupt void EXTI3_interrupt(void) //__interrupt (11)
 {
     exti_interrupt_helper(3);
 }
@@ -222,7 +222,7 @@ void EXTI3_interrupt(void) __interrupt (11)
 /**
  * @brief interrupt for pin 4 on all ports
  */
-void EXTI4_interrupt(void) __interrupt (12)
+@interrupt void EXTI4_interrupt(void) //__interrupt (12)
 {
     exti_interrupt_helper(4);
 }
@@ -230,7 +230,7 @@ void EXTI4_interrupt(void) __interrupt (12)
 /**
  * @brief interrupt for pin 5 on all ports
  */
-void EXTI5_interrupt(void) __interrupt (13)
+@interrupt void EXTI5_interrupt(void) //__interrupt (13)
 {
     exti_interrupt_helper(5);
 }
@@ -238,7 +238,7 @@ void EXTI5_interrupt(void) __interrupt (13)
 /**
  * @brief interrupt for pin 6 on all ports
  */
-void EXTI6_interrupt(void) __interrupt (14)
+@interrupt void EXTI6_interrupt(void) //__interrupt (14)
 {
     exti_interrupt_helper(6);
 }
@@ -246,7 +246,7 @@ void EXTI6_interrupt(void) __interrupt (14)
 /**
  * @brief interrupt for pin 7 on all ports
  */
-void EXTI7_interrupt(void) __interrupt (15)
+@interrupt void EXTI7_interrupt(void) //__interrupt (15)
 {
     exti_interrupt_helper(7);
 }

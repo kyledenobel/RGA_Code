@@ -30,3 +30,7 @@ To confirm the setup, run
 
 `make flash`
 - flashes the hex file to the target
+
+# Programming
+In order to erase, you must toggle the ROP byte under the OPTION BYTE tab in STVP.
+Program only the current tab in order to toggle the byte.

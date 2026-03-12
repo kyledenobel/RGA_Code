@@ -13,12 +13,12 @@
 typedef void (*gpio_interrupt_t)(void);
 
 typedef enum {
-    GPIO_PORT_A = (uint8_t) GPIOA,
-    GPIO_PORT_B = (uint8_t) GPIOB,
-    GPIO_PORT_C = (uint8_t) GPIOC,
-    GPIO_PORT_D = (uint8_t) GPIOD,
-    GPIO_PORT_E = (uint8_t) GPIOE,
-    GPIO_PORT_F = (uint8_t) GPIOF
+    GPIO_PORT_A = (uint16_t) GPIOA,
+    GPIO_PORT_B = (uint16_t) GPIOB,
+    GPIO_PORT_C = (uint16_t) GPIOC,
+    GPIO_PORT_D = (uint16_t) GPIOD,
+    GPIO_PORT_E = (uint16_t) GPIOE,
+    GPIO_PORT_F = (uint16_t) GPIOF
 } gpio_port_t;
 
 

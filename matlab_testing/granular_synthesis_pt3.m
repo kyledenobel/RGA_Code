@@ -1,20 +1,21 @@
 % Version 3 of Granular Synthesis
 
 
-rho = 1;
+rho = 0.5;
 
 
 % ========== begin implementation ========== %
 % read audio sample
 [x, Fs] = audioread("G-scale.wav");
+[x, Fs] = audioread("American Idiot - 96000.wav");
 samples = 6*Fs; % 3 seconds of samples
 x = x(1:samples, :);
 
 
-Fs = 10000;
+%Fs = 96000;
 tt = 0:1/Fs:2;
 f = 300;
-x = cos(2*pi*tt*f);
+%x = cos(2*pi*tt*f);
 
 
 % let S = the stride length  (grain period = 25ms)
@@ -109,9 +110,11 @@ x_axis = linspace(-Fs, Fs, int32(2*Fs))./2;
 figure(3)
 subplot(2,1,1)
 plot(x_axis, abs(X))
+title('input fft')
 xlim([-2000, 2000])
 subplot(2,1,2)
 plot(x_axis, abs(Y))
+title('output fft')
 xlim([-2000, 2000])
 
 
