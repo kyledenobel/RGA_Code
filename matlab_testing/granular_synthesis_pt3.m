@@ -7,11 +7,12 @@ rho = 1;
 % ========== begin implementation ========== %
 % read audio sample
 [x, Fs] = audioread("G-scale.wav");
-samples = 6*Fs; % 3 seconds of samples
+[x, Fs] = audioread("guitar.wav");
+samples = 6*Fs; % 3 seconds of sample2
 x = x(1:samples, :);
 
 
-Fs = 10000;
+Fs = 196000;
 tt = 0:1/Fs:2;
 f = 300;
 x = cos(2*pi*tt*f);
@@ -109,9 +110,11 @@ x_axis = linspace(-Fs, Fs, int32(2*Fs))./2;
 figure(3)
 subplot(2,1,1)
 plot(x_axis, abs(X))
+title('input fft')
 xlim([-2000, 2000])
 subplot(2,1,2)
 plot(x_axis, abs(Y))
+title('output fft')
 xlim([-2000, 2000])
 
 
