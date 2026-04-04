@@ -4,109 +4,88 @@
  */
 
 #include "main.h"
-#include "gtsr_can.h"
-#include "gtsr_clock.h"
-#include "gtsr_debug.h"
-#include "gtsr_gpio.h"
-#include "gtsr_timers.h"
-#include "gtsr_version.h"
 #include "stm32g4xx.h"
 #include "stm32g4xx_hal.h"
 #include "stm32g4xx_hal_def.h"
-#include <assert.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include "gtsr_clock.h"
+#include "gtsr_spi.h"
+#include "gtsr_gpio.h"
+#include "stdint.h"
+#include "gtsr_debug.h"
 
-/******************************************
- * Please update to usable pins on your device
- ********************************************/
-// Ex: GPIOA
-#define INPUT_TEST_GPIO_PORT  GPIOA
-#define INPUT_TEST_GPIO_PIN   GTSR_GPIO_PIN_0
-
-#define OUTPUT_TEST_GPIO_PORT GPIOA
-#define OUTPUT_TEST_GPIO_PIN  GTSR_GPIO_PIN_1
-
-gtsr_timer_t timer;
-gtsr_can_t can;
-
-static void gpio_callback(volatile void *args);
-static void timer_callback(volatile void *args);
+#define ever  (;;)
 
 /**
  * @brief  The application entry point.
  * @retval int
  */
 int main(void) {
-    /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
     /*TODO: Remove once HAL is no longer needed */
     HAL_Init();
-
     system_clock_init();
-
     GTSR_DEBUG_INIT();
 
-    GTSR_LOGE("Error output - Hello world");
-    GTSR_LOGW("Warning output - Hello world");
-    GTSR_LOGI("Informational output - Hello world. Clock speed is %ld.", get_AHB_clock_speed());
-    PRINT_VERSION();
-    GTSR_LOGD("Debug output - Hello world. This file was last modified at %s.", __TIMESTAMP__);
-    GTSR_LOGV("Verbose outptut - Hello world. This file was compiled at %s %s", __DATE__, __TIME__);
-    GTSR_LOGV("ARM's CMSIS interface libary version: %d.%d", __CM_CMSIS_VERSION_MAIN,
-              __CM_CMSIS_VERSION_SUB);
-#ifdef __GNUC__
-    GTSR_LOGV("GCC compiler version is: %d.%d.%d", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
-#endif
+    GTSR_PRINTF("starting program..\n");
 
-    HAL_Delay(1);
+    // spi object
+    gtsr_spi_t spi1;
 
-    gtsr_gpio_init_t input_test_pin = DEFAULT_GPIO_INITALIZATION(
-        INPUT_TEST_GPIO_PORT, INPUT_TEST_GPIO_PIN, GTSR_GPIO_INPUT, NOPULL);
-    gtsr_gpio_init_t output_test_pin = DEFAULT_GPIO_INITALIZATION(
-        OUTPUT_TEST_GPIO_PORT, OUTPUT_TEST_GPIO_PIN, GTSR_GPIO_OUTPUT, NOPULL);
-    gtsr_gpio_callback_init_t input_callback = {.base_port = INPUT_TEST_GPIO_PORT,
-                                                .pins = INPUT_TEST_GPIO_PIN,
-                                                .edge_trigger = RISING_AND_FALLING_EDGE,
-                                                .callback = gpio_callback,
-                                                .args = __TIMESTAMP__};
-    GTSR_LOGI("Initalizing a pin to read from");
-    gpio_pin_init(&input_test_pin);
-    GTSR_LOGI("Current reading of input test pin is: %d",
-              gpio_read_pin(INPUT_TEST_GPIO_PORT, INPUT_TEST_GPIO_PIN));
+    // spi initializer
+    gtsr_spi_initializer_t init;
+    init.spi_select = GTSR_SPI1;
+    init.clock_polarity = GTSR_SPI_IDLE_LOW;
+    init.clock_phase = GTSR_SPI_SAMPLE_FIRST_EDGE;
+    init.data_direction = GTSR_SPI_MSB_FIRST;
+    init.data_size = GTSR_SPI_16_BIT_DATA;
+    init.frame_format = GTSR_SPI_MOTOROLA;
+    init.clock_frequency = 125000;
+    init.sck = GTSR_SPI1_SCK_PA5;
+    init.mosi = GTSR_SPI1_MOSI_PA7;
+    init.miso = GTSR_SPI1_MISO_PA6;
 
-    gpio_callback_init(&input_callback);
-    GTSR_LOGI("Initalizing a pin to written to");
-    gpio_pin_init(&output_test_pin);
-    gpio_write(OUTPUT_TEST_GPIO_PORT, OUTPUT_TEST_GPIO_PIN, true);
-    GTSR_LOGI("Setting value to %d", gpio_read_pin(OUTPUT_TEST_GPIO_PORT, OUTPUT_TEST_GPIO_PIN));
+    // initialize spi object
+    gtsr_spi_init(&spi1, &init);
 
-    gtsr_timer_init_t timer_init = {
-        .timer_peripheral = GTSR_TIM1,
-        .frequency = 5,
-        .callbacks = {{.n_ticks = 1, .handler = timer_callback, .args = NULL}},
-        .number_of_callbacks = 1,
-    };
-    gtsr_timer_init(&timer_init, &timer);
-    while (true) {
-        GTSR_LOGI("Waiting");
-        HAL_Delay(2);
+    // create peripheral
+    gtsr_spi_peripheral_t peripheral;
+    // make data buffers
+    uint16_t rec[4];
+    uint16_t send[4] = {1, 3, 0x33, 7};
+
+    peripheral.data_len = sizeof(send);
+    peripheral.rec_buff = rec;
+    peripheral.send_buff = send;
+    peripheral.cs.base = GPIOA;
+    peripheral.cs.pin = GTSR_GPIO_PIN_1;
+
+    // initialize peripheral
+    gtsr_spi_peripheral_init(&peripheral);
+
+
+    for(;;)
+    {
+        gtsr_spi_transaction(&spi1, &peripheral);
+        HAL_Delay(1000);
+        GTSR_PRINTF("rec[0] = %d | rec[1] = %d | rec[2] = %d | rec[3] = %d\n", rec[0], rec[1], rec[2], rec[3]);
     }
+
+
 }
 
-static void gpio_callback(volatile void *args) {
-    volatile char *timestamp = (volatile char *)args;
-    GTSR_LOGI("An edge was detected");
-    GTSR_LOGI("It was a %s edge",
-              gpio_read_pin(INPUT_TEST_GPIO_PORT, INPUT_TEST_GPIO_PIN) ? "rising" : "falling");
-    GTSR_LOGI("This file was modified at %s", timestamp);
-}
 
-static void timer_callback(volatile void *args) {
-    (void)args;
-    static uint32_t counter = 0;
-    counter++;
-    GTSR_LOGI("The timer has been triggered. This is the %ld time", counter);
-    gpio_toggle(OUTPUT_TEST_GPIO_PORT, OUTPUT_TEST_GPIO_PIN);
-    GTSR_LOGI("The output GPIO pin is toggling its state to: %d",
-              gpio_read_pin(OUTPUT_TEST_GPIO_PORT, OUTPUT_TEST_GPIO_PIN));
+#ifdef USE_FULL_ASSERT
+/**
+ * @brief  Reports the name of the source file and the source line number
+ *         where the assert_param error has occurred.
+ * @param  file: pointer to the source file name
+ * @param  line: assert_param error line source number
+ * @retval None
+ */
+void assert_failed(uint8_t *file, uint32_t line) {
+    /* USER CODE BEGIN 6 */
+    /* User can add his own implementation to report the file name and line
+       number, ex: printf("Wrong parameters value: file %s on line %d\r\n", file,
+       line) */
+    /* USER CODE END 6 */
 }
+#endif /* USE_FULL_ASSERT */

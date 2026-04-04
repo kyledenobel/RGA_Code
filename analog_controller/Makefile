@@ -21,7 +21,7 @@ C_APP_SOURCES :=  \
 $(CORE_APP_SRC_PATH)/main.c \
 
 # C++ application sources
-CXX_APP_SOURCES := $(CORE_APP_SRC_PATH)/test.cpp
+CXX_APP_SOURCES := 
 
 # Other C library source files
 C_LIB_SOURCES := $(wildcard $(THIRD_PARTY_PATH)/printf/src/printf/*.c)

@@ -11,7 +11,7 @@
 extern "C" {
 #endif
 
-void cpp_test(void);
+
 
 #ifdef __cplusplus
 }
