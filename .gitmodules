@@ -1,3 +1,0 @@
-[submodule "analog_controller/STM32G4-Firmware-Template"]
-	path = analog_controller/STM32G4-Firmware-Template
-	url = https://github.gatech.edu/GTSR/STM32G4-Firmware-Template.git
