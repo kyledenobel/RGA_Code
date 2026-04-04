@@ -1,0 +1,40 @@
+Checks: >
+  clang-diagnostic-*,
+  clang-analyzer-*,
+  concurrency-*,
+  bugprone-*,
+  performance-*,
+  readability-*,
+  misc-*,
+  cert-env33-c,
+  cert-flp30-c,
+  cert-msc32-c,
+  -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,
+  -performance-no-int-to-ptr,
+  -performance-enum-size,
+  -readability-avoid-const-params-in-decels,
+  -readability-uppercase-literal-suffix,
+  -readability-identifier-length,
+  -misc-coroutine-hostile-raii,
+  -misc-no-recursion,
+  -misc-non-private-member-variables-in-classes,
+  -misc-use-anonymous-namespace,
+  -bugprone-easily-swappable-parameters
+
+WarningsAsErrors: ""
+HeaderFileExtensions:
+  - h
+  - hh
+  - hpp
+  - hxx
+ImplementationFileExtensions:
+  - c
+  - cc
+  - cpp
+  - cxx
+HeaderFilterRegex: ""
+FormatStyle: file
+CheckOptions:
+  concurrency-mt-unsafe.FunctionSet: "any"
+  bugprone-reserved-identifier.AllowedIdentifiers: "__io_putchar;__io_getchar;_env;_getpid;_kill;_read;_write;_close;_fstat;_isatty;_lseek;_open;_wait;_unlink;_times;_stat;_link;_fork;_execve;__sbrk_heap_end;_sbrk;_end;_estack;_Min_Stack_Size"
+SystemHeaders: true

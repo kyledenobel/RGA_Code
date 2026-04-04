@@ -1,0 +1,2 @@
+# Don't format libraries by default
+DisableFormat: true

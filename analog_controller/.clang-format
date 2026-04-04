@@ -1,0 +1,53 @@
+BasedOnStyle:  LLVM
+AccessModifierOffset: -4
+AlignConsecutiveBitFields: AcrossEmptyLinesAndComments
+AlignConsecutiveMacros: AcrossEmptyLinesAndComments
+AlignEscapedNewlines: Right
+AlignTrailingComments:
+  Kind:            Always
+  OverEmptyLines:  1
+AllowShortBlocksOnASingleLine: Never
+AllowShortEnumsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: All
+AttributeMacros:
+  - __capability
+BreakAdjacentStringLiterals: true
+BreakArrays:     true
+BreakConstructorInitializers: BeforeColon
+BreakStringLiterals: true
+ColumnLimit:     100
+CommentPragmas:  '^ IWYU pragma:'
+ConstructorInitializerIndentWidth: 4
+Cpp11BracedListStyle: true
+ForEachMacros:
+  - foreach
+  - Q_FOREACH
+  - BOOST_FOREACH
+IfMacros:
+  - KJ_IF_MAYBE
+IndentCaseBlocks: false
+IndentCaseLabels: true
+IndentExternBlock: NoIndent
+IndentGotoLabels: false
+IndentWidth:     4
+IndentWrappedFunctionNames: true
+IntegerLiteralSeparator:
+  Binary:          0
+  BinaryMinDigits: 0
+  Decimal:         0
+  DecimalMinDigits: 0
+  Hex:             0
+  HexMinDigits:    0
+MaxEmptyLinesToKeep: 1
+PPIndentWidth:   -1
+QualifierAlignment: Leave
+ReflowComments:  true
+ShortNamespaceLines: 1
+SkipMacroDefinitionBody: false
+SortIncludes:    CaseSensitive
+SpacesBeforeTrailingComments: 1
+SpacesInLineCommentPrefix:
+  Minimum:         1
+  Maximum:         -1
+TabWidth:        4
+UseTab:          Never

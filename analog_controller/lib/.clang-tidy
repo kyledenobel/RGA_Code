@@ -1,0 +1,3 @@
+# Don't run checks on libraries by default
+Checks: >
+  -*
