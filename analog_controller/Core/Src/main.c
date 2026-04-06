@@ -280,10 +280,7 @@ int main(void) {
                 gpio_write(LED_2, (bool)selected_effect->active);
                 gpio_write(SPDT_IO_2, (bool)selected_effect->active);
             }
-
-            if(selected_effect->active) {
-                newly_selected = true;
-            }
+            newly_selected = true;
         }
 
 
@@ -303,7 +300,7 @@ int main(void) {
             ((volume.value != volume.last_val) \
             || (tone.value != tone.last_val) \
             || (gain.value != gain.last_val) \
-            || ())) {
+            || newly_selected)) {
 
             // update spi peripheral matrix with pot values
             spi_peripheral_data_matrix[selected_effect_num][VOLUME] = (uint16_t) volume.value;
@@ -326,7 +323,7 @@ int main(void) {
 
 
 
-        HAL_Delay(50);
+        // HAL_Delay(50);  // TODO:Remove
     }
 
 
