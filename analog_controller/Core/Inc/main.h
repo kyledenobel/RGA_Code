@@ -104,7 +104,7 @@ typedef struct {
     gtsr_adc_ctx_t* adc;
     uint16_t adc_arr[NUM_ADC_SAMPLES];
     uint32_t num_samples_to_average;
-    uint8_t value;
+    volatile uint8_t value;
     uint8_t last_val;
     uint8_t idx;
 } pot_t;

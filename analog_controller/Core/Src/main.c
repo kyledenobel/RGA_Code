@@ -8,6 +8,7 @@
  * @note adc polling must now have a call to gtsr_adc_start immediately before
  */
 
+
 #include "stm32g4xx_hal.h"
 #include "stm32g4xx.h"
 #include "gtsr_clock.h"
@@ -21,15 +22,15 @@
 
 
 static void update_pot(pot_t* pot, uint8_t buf_select);
-static void update_toggle(debounce_t* toggle);
-
-
+static void update_toggle(debounce_t* button_toggle);
 
 int main(void) {
     // Initialize System
     HAL_Init();
     system_clock_init();
-    GTSR_DEBUG_INIT();      // TODO: this needs to be changed to match the UART we are using
+    GTSR_DEBUG_INIT();
+
+    GTSR_PRINTF("Initializing program ... ");
 
     /* Initialize GPIO, ADC, SPI */
     // SPDT_IO
@@ -84,7 +85,7 @@ int main(void) {
     gtsr_adc_ctx_bind(&adc5, ADC5, &(adc5_raw_samples[0]));
     gtsr_adc_set_sampling_resolution(&adc5, GTSR_ADC_SMPLR_8BIT);
     gtsr_adc_set_common_clock(ADC345_COMMON);
-    SET_BIT(ADC345_COMMON->CCR, ADC_CCR_VREFEN);
+    // SET_BIT(ADC345_COMMON->CCR, ADC_CCR_VREFEN);
     gtsr_adc_set_sequence(&adc5, channels, sizeof(channels));
 
     gtsr_adc_enable(&adc3);
@@ -99,7 +100,7 @@ int main(void) {
     spi_init.clock_phase = GTSR_SPI_SAMPLE_FIRST_EDGE;
     spi_init.clock_polarity = GTSR_SPI_IDLE_HIGH;
     spi_init.data_direction = GTSR_SPI_MSB_FIRST;
-    spi_init.data_size = GTSR_SPI_8_BIT_DATA;
+    spi_init.data_size = GTSR_SPI_16_BIT_DATA;
     spi_init.frame_format = GTSR_SPI_MOTOROLA;
     spi_init.miso = GTSR_SPI1_MISO_PA6;
     spi_init.mosi = GTSR_SPI1_MOSI_PA7;
@@ -198,13 +199,13 @@ int main(void) {
     effect_2.tone.send_buff = &spi_peripheral_data_matrix[EFFECT_2][TONE];
     // overdrive gain digital pot
     effect_2.gain.cs.base = GPIOB;                  // CS 10
-    effect_2.gain.cs.pin = GTSR_GPIO_PIN_10;
+    effect_2.gain.cs.pin = GTSR_GPIO_PIN_12;
     effect_2.gain.data_len = DATA_LENGTH;
     effect_2.gain.rec_buff = spi_dummy_rec;
     effect_2.gain.send_buff = &spi_peripheral_data_matrix[EFFECT_2][GAIN];
     // overdrive volume2 digital pot
     effect_2.volume2.cs.base = GPIOB;               // CS 11
-    effect_2.volume2.cs.pin = GTSR_GPIO_PIN_12;
+    effect_2.volume2.cs.pin = GTSR_GPIO_PIN_10;
     effect_2.volume2.data_len = DATA_LENGTH;
     effect_2.volume2.rec_buff = spi_dummy_rec;
     effect_2.volume2.send_buff = &spi_peripheral_data_matrix[EFFECT_2][VOLUME2];
@@ -241,8 +242,8 @@ int main(void) {
     tone.last_val = 0;
     gain.last_val = 0;
 
-    GTSR_PRINTF("initializing program\n");
 
+    GTSR_PRINTF("Program Initialized\n\rStarting MAIN Loop\n");
 
     effect_t* selected_effect;
     uint8_t selected_effect_num;
@@ -250,11 +251,11 @@ int main(void) {
     for(;;)
     {
         // check effect select
-        if(gpio_read_pin(EFFECT_SELECT_0)) {
+        if(!gpio_read_pin(EFFECT_SELECT_0)) {
             selected_effect = &effect_0;
             selected_effect_num = EFFECT_0;
         }
-        else if(gpio_read_pin(EFFECT_SELECT_1)) {
+        else if(!gpio_read_pin(EFFECT_SELECT_1)) {
             selected_effect = &effect_1;
             selected_effect_num = EFFECT_1;
         }
@@ -281,6 +282,7 @@ int main(void) {
                 gpio_write(SPDT_IO_2, (bool)selected_effect->active);
             }
             newly_selected = true;
+            // GTSR_PRINTF("Selected Effect = %d | Effect Active = %d\n", selected_effect_num, selected_effect->active);
         }
 
 
@@ -308,6 +310,8 @@ int main(void) {
             spi_peripheral_data_matrix[selected_effect_num][GAIN] = (uint16_t) gain.value;
             spi_peripheral_data_matrix[selected_effect_num][VOLUME2] = (uint16_t) (MAX_POT_VALUE - (volume.value));
 
+            GTSR_PRINTF("volume value = %d\n", spi_peripheral_data_matrix[selected_effect_num][VOLUME]);
+
             // send pot values to effect board
             gtsr_spi_transaction(&spi1, &(selected_effect->volume));
             gtsr_spi_transaction(&spi1, &(selected_effect->tone));
@@ -315,15 +319,14 @@ int main(void) {
             gtsr_spi_transaction(&spi1, &(selected_effect->volume2));
 
             newly_selected = false;
+            
         }
+        GTSR_PRINTF("Effect = %d | Effect Status = %d | Volume %d | Tone %d | Gain %d\n", selected_effect_num, selected_effect->active, volume.value, tone.value, gain.value);
+        // GTSR_PRINTF("Volume %d | Tone %d | Gain %d\n", gpio_read_pin(GPIOB, GTSR_GPIO_PIN_13), gpio_read_pin(GPIOA, GTSR_GPIO_PIN_8), gpio_read_pin(GPIOA, GTSR_GPIO_PIN_9));
+        // GTSR_PRINTF("Effect = %d | Effect status = %d\n", selected_effect_num, selected_effect->active);
 
+        // HAL_Delay(200);
 
-
-        // GTSR_PRINTF("volume: %lu | tone: %lu | gain: %lu\n", volume.value, tone.value, gain.value);
-
-
-
-        // HAL_Delay(50);  // TODO:Remove
     }
 
 
@@ -342,20 +345,20 @@ void update_pot(pot_t* pot, uint8_t buf_select) {
         sum += pot->adc_arr[i];
     }
     pot->last_val = pot->value;
-    pot->value = (uint8_t)(sum >> ADC_DIV_FACTOR);
+    pot->value = (uint8_t)(sum>> ADC_DIV_FACTOR);
 }
 
 
-inline void update_toggle(debounce_t* toggle) {
-    toggle->values[toggle->idx] = gpio_read_pin(EFFECT_TOGGLE);
-    toggle->idx++;
-    if(toggle->idx == DEBOUNCE_LENGTH) {
-        toggle->idx = 0;
+inline void update_toggle(debounce_t* button_toggle) {
+    button_toggle->values[button_toggle->idx] = gpio_read_pin(EFFECT_TOGGLE);
+    button_toggle->idx++;
+    if(button_toggle->idx == DEBOUNCE_LENGTH) {
+        button_toggle->idx = 0;
     }
     uint32_t sum = 0;
     for(uint32_t i = 0; i < DEBOUNCE_LENGTH; i++) {
-        sum += (uint32_t) (toggle->values[i]);
+        sum += (uint32_t) (button_toggle->values[i]);
     }
-    toggle->last_val = toggle->val;
-    toggle->val = (uint8_t) (sum >> DEBOUND_DIV_FACTOR);
+    button_toggle->last_val = button_toggle->val;
+    button_toggle->val = (uint8_t) (sum >> DEBOUND_DIV_FACTOR);
 }
