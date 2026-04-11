@@ -2,14 +2,24 @@
 #include "daisysp.h"
 #include <stdio.h>
 #include <string.h>
+#include "uLCD.h"
+#include "Inputs.h"
 
 using namespace daisy;
+using uLCD::ConvertColor;
 
+// Dumb macros
+#define f_unmount(path) f_mount(0, path, 0)
+
+
+// Globals
+
+SdmmcHandler sd;
 FatFSInterface fsi;
 FIL file;
 
 DaisySeed hw;
-daisysp::Oscillator osc;
+uLCD::Display lcd;
 //USBHostHandle usb_host;
 
 
@@ -32,7 +42,15 @@ constexpr size_t HISTORY_LENGTH = 50000;
 constexpr int32_t DROP_OFFSET_A = DROP_WINDOW;
 constexpr int32_t DROP_OFFSET_B = (DROP_WINDOW + DROP_WINDOW/2);
 
-constexpr char TERMINATOR_CHAR = 0;
+constexpr char TERMINATOR_CHAR = '\0';
+
+enum Pages {
+    RECORD_PAGE = 0,
+    DELAY_PAGE,
+    DROP_PAGE,
+    PAGE_COUNT,
+    TUNER_PAGE
+};
 
 enum RecordingCode {
     REC_OK,
@@ -45,34 +63,39 @@ enum RecordingCode {
     REC_IN_PROGRESS, // Recording already in progress
 };
 
+typedef WavWriter<32768/2> WavWriterT;
+
 struct RecordingState {
     bool mounted = false;
     bool is_recording = false;
     bool lockout = false;
     uint32_t current_index = 0;
-    WavWriter<16384> writer;
+    WavWriterT writer;
 };
 
-#define GET_STORAGE_FILE_SYSTEM fsi.GetUSBFileSystem()
-#define GET_STORAGE_PATH fsi.GetUSBPath()
+#define GET_STORAGE_FILE_SYSTEM fsi.GetSDFileSystem()
+#define GET_STORAGE_PATH fsi.GetSDPath()
 #define FILE_FORMATTING "AmpRec_%04lu.wav" 
 #define MAX_FILE_INDEX 9999
 #define WAV_CHANNELS 1
-#define WAV_BITS_PER_SAMPLE 12
-#define MEDIA_TYPE FatFSInterface::Config::MEDIA_USB
+#define WAV_BITS_PER_SAMPLE 16 // can only be 16 or 32 apparently
+#define MEDIA_TYPE FatFSInterface::Config::MEDIA_SD
 constexpr size_t FILE_NAME_SIZE = 64;
 
 float history[HISTORY_LENGTH] = {0};
 int32_t curr_history_index = 0;
 int32_t curr_drop_index = 0;
 
-int delay_steps = 5;
+int delay_steps = 2;
 float delay_decay = 0.5;
 
-bool drop_enabled = true;
+bool drop_enabled = false;
 
 RecordingState rec_state = RecordingState();
 
+GPIO sel_but;
+GPIO card_detect;
+InputHandler input_handler;
 /// Checks if a file exists
 RecordingCode file_exists(const char* path) {
     FIL f;
@@ -245,17 +268,8 @@ void AudioProcessingCallback(AudioHandle::InputBuffer in,
         curr_drop_index++;
         curr_drop_index %= DROP_WRAPAROUND;
 
-        // The oscillator's Process function synthesizes, and
-        // returns the next sample.
-        float sine_signal = osc.Process();
-
         // Sample input
         float sample = in[0][i];
-        
-        // Apply drop
-        if (drop_enabled) {
-            sample = Drop(curr_drop_index);
-        }
 
         // Apply delay
         if (delay_steps != DELAY_STEPS_DISABLED) {
@@ -264,15 +278,20 @@ void AudioProcessingCallback(AudioHandle::InputBuffer in,
         
         // update history with processed signal
         history[curr_history_index] = sample;
+        
+        // Apply drop
+        if (drop_enabled) {
+            sample = Drop(curr_drop_index);
+        }
 
         // send to WavWriter if recording
-        if (rec_state.is_recording) {
+        if (rec_state.is_recording && (curr_history_index % 4 == 0)) {
             rec_state.writer.Sample(&sample);
         }
 
         // Set set output to processed signal
         out[0][i] = sample;
-        out[1][i] = sine_signal;
+        out[1][i] = 0;
     }
 }
 
@@ -285,7 +304,7 @@ struct WriteReturnCode {
     }
 };
 
-WriteReturnCode write_test(const char* filename) {
+WriteReturnCode write_test(const char* filename, uLCD::Display &lcd) {
     // Initialize the SDMMC interface and FatFS drivers
     FatFSInterface::Config fsi_cfg;
     fsi_cfg.media = MEDIA_TYPE;
@@ -295,17 +314,14 @@ WriteReturnCode write_test(const char* filename) {
         0);
     if (res != FR_OK)
     {
+        char err_str[32] = "failed to mount";
+        lcd.String(err_str, 2, 3, ConvertColor(0xFFFFFF));
         // If some error is encountered in mounting the card, then simply return.
         return WriteReturnCode(0, res);
     }
     for (int i = 0; i < 100; i++) {
         //usb_host.Process();
     }
-
-    //hw.SetLed(false);
-    hw.DelayMs(500);
-    //hw.SetLed(true);
-    hw.DelayMs(500);
 
     char file_path[512] = {0};
     strcpy(file_path, GET_STORAGE_PATH);
@@ -319,15 +335,12 @@ WriteReturnCode write_test(const char* filename) {
     res = f_open(&file, file_path, FA_CREATE_ALWAYS | FA_WRITE);
     if (res != FR_OK)
     {
+        char err_str[32] = "failed to open";
+        lcd.String(err_str, 2, 4, ConvertColor(0xFFFFFF));
         // If some error is encountered in opening the file, then simply return.
         f_close(&file);
         return WriteReturnCode(1, res);
     }
-
-    //hw.SetLed(false);
-    hw.DelayMs(500);
-    //hw.SetLed(true);
-    hw.DelayMs(500);
 
 
     UINT bytes_written = 0;
@@ -336,16 +349,16 @@ WriteReturnCode write_test(const char* filename) {
     res = f_write(&file, buffer, BUFFER_SIZE, &bytes_written);
     if (res != FR_OK)
     {
+        char err_str[32] = "failed to write";
+        lcd.String(err_str, 2, 5, ConvertColor(0xFFFFFF));
         // If some error is encountered in opening the file, then simply return.
         f_close(&file);
         return WriteReturnCode(2, res);
     }
     f_close(&file);
 
-    //hw.SetLed(false);
-    hw.DelayMs(500);
-    //hw.SetLed(true);
-    hw.DelayMs(500);
+    char suc_str[32] = "success!";
+    lcd.String(suc_str, 2, 6, ConvertColor(0xFFFFFF));
     return WriteReturnCode(2, res);
 }
 //void write_test(const char* filename) {}
@@ -355,16 +368,123 @@ void ConnectCallback(void *data) {hw.SetLed(true);}
 void DisconnectCallback(void *data) {hw.SetLed(false);}
 void ErrorCallback(void *data) {}
 
+constexpr uint32_t UNMOUNTED_BACKGROUND = 0xffa28e;
+constexpr uint32_t MOUNTED_BACKGROUND = 0xFFFFFF;
+constexpr uint32_t SCROLL_BACKGROUND = 0x444444;
+constexpr uint32_t SCROLL_SELECTED = 0xFFFFFF;
+constexpr uint32_t SCROLL_UNSELECTED = 0xBBBBBB;
+
+const char* REC_SCROLL_TEXT = "RECORD";
+const char* DELAY_SCROLL_TEXT = "DELAY";
+const char* DROP_SCROLL_TEXT = "DROP";
+const char* UNKNOWN_TEXT = "UNKWN";
+
+const char* GetScrollText(uint16_t page) {
+    switch (page) {
+        case (RECORD_PAGE):
+        return REC_SCROLL_TEXT;
+        case (DELAY_PAGE):
+        return DELAY_SCROLL_TEXT;
+        case (DROP_PAGE):
+        return DROP_SCROLL_TEXT;
+        default :
+        return UNKNOWN_TEXT;
+    }
+}
+
+void render_scroll_wheel(uint16_t page, uLCD::Display lcd) {
+    // Clear out
+    lcd.Rect(0, 7 * 11 - 1, 0, 8 * 15 - 1, ConvertColor(SCROLL_BACKGROUND), true);
+    // Set text background
+    lcd.SetTextBackground(ConvertColor(SCROLL_BACKGROUND));
+
+    // Selected text
+    lcd.String(GetScrollText(page), 1, 5, ConvertColor(SCROLL_SELECTED));
+    // Unselected stuff
+    lcd.String(GetScrollText((page + (PAGE_COUNT - 1)) % PAGE_COUNT), 1, 3, ConvertColor(SCROLL_SELECTED));
+    lcd.String(GetScrollText((page + 1) % PAGE_COUNT), 1, 7, ConvertColor(SCROLL_SELECTED));
+
+    lcd.SetTextBackground(0); // Set back to black
+}
+
+void render_recording_subsection(RecordingState &state, uLCD::Display lcd) {
+    // Red background if unmounted, normal background if mounted
+    uint16_t bkg = state.mounted ? ConvertColor(MOUNTED_BACKGROUND) : ConvertColor(UNMOUNTED_BACKGROUND);
+    lcd.SetTextBackground(bkg); // Set background
+
+    // Clear it
+    lcd.Rect(0, 119, 127, 127, bkg, true);
+
+    if (state.mounted) {
+        lcd.String("NO SRTG", 0, 15, ConvertColor(0x000000));
+    } else {
+        lcd.String("WAITING", 0, 15, ConvertColor(0x000000));
+    }
+
+    lcd.SetTextBackground(0); // Reset bkg to black
+}
+
+void render_recording_timer(RecordingState &state, uLCD::Display lcd) {
+    // only bother if it is mounted
+    if (!state.mounted) {
+        return;
+    }
+
+    float time = state.writer.GetLengthSeconds();
+
+    uint32_t time_centisec = static_cast<int>(time * 10);  // centiseconds
+    // implicit maximum
+    if (time_centisec > 600 * 99 - 1) {
+        time_centisec = 600 * 99 - 1;
+    }
+    uint32_t time_min = time_centisec / 600;
+    time_centisec = time_centisec % 600;
+
+    char time_str[8] = "00:00.0";
+    time_str[6] = time_centisec % 10;
+    time_centisec /= 10;
+    time_str[4] = time_centisec % 10;
+    time_centisec /= 10;
+    time_str[3] = time_centisec % 10;
+
+    time_str[1] = time_min % 10;
+    time_str[0] = (time_min / 10) % 10;
+
+    // Red background if unmounted, normal background if mounted
+    uint16_t bkg = ConvertColor(MOUNTED_BACKGROUND);
+    lcd.SetTextBackground(bkg); // Set background
+
+    lcd.String(time_str, 11, 15, 0x000000);
+}
+
 int main(void)
 {
     hw.Init();
-    // We initialize the oscillator with the sample rate of the hardware
-    // this ensures that the frequency of the Oscillator will be accurate.
-    osc.Init(hw.AudioSampleRate());
+    sel_but.Init(seed::D27, GPIO::Mode::INPUT, GPIO::Pull::NOPULL, GPIO::Speed::LOW);
+    card_detect.Init(seed::D28, GPIO::Mode::INPUT, GPIO::Pull::PULLUP, GPIO::Speed::LOW);
     hw.SetAudioBlockSize(16);
 
-    WavWriter<16384>::Config wav_cfg = {
-        hw.AudioSampleRate(),
+    Blink(1);
+    
+    lcd.Init(&hw, seed::D12, seed::D11, UartHandler::Config::Peripheral::UART_4, seed::D10, BAUDS::OK);
+
+    lcd.Line(50, 50, 40, 80, ConvertColor(0xFFFFFF));
+    
+    lcd.Rect(10, 10, 40, 40, ConvertColor(0x444444), true);
+
+    Blink(1);
+
+    char* start_str2 = "indep text\nis cool!\0";
+    lcd.IndString(start_str2, 2, 3, ConvertColor(0xFFFFFF));
+    Blink(1);
+
+    char* start_str = "hello!\0";
+    lcd.String(start_str, 2, 2, ConvertColor(0xFFFFFF));
+    
+    Blink(1);
+    
+    WavWriterT::Config wav_cfg = {
+        hw.AudioSampleRate() / 4, // we record at half speed due to drop existing
         WAV_CHANNELS,
         WAV_BITS_PER_SAMPLE,
     };
@@ -388,233 +508,146 @@ int main(void)
      
     // Enable Logging, and set up the USB connection.
     hw.StartLog();
-    
-    Blink(5);
 
     // Initialize the SDMMC interface and FatFS drivers
+    SdmmcHandler::Config sd_cfg;
+    sd_cfg.Defaults();
+    sd_cfg.clock_powersave = false;
+	sd_cfg.width = SdmmcHandler::BusWidth::BITS_1;
+    sd_cfg.speed = daisy::SdmmcHandler::Speed::VERY_FAST;
+    auto sd_res = sd.Init(sd_cfg);
+    if (sd_res == SdmmcHandler::Result::ERROR)
+        return -1;
     FatFSInterface::Config fsi_cfg;
     fsi_cfg.media = MEDIA_TYPE;
     fsi.Init(fsi_cfg);
     auto res = f_mount(& GET_STORAGE_FILE_SYSTEM,
         GET_STORAGE_PATH,
-        0);
+        1);
     // Communicate results
-    if (res == FR_OK) {
-        rec_state.mounted = true;
-        Blink(5);
-    } else {
-        rec_state.mounted = false;
-        hw.DelayMs(1000);
-    }
+    rec_state.mounted = (res == FR_OK);
 
-    //WriteReturnCode out = write_test(name);
+    //char * name = "test.txt";
+    //WriteReturnCode out = write_test(name, lcd);
+    //return 0;
     //hw.PrintLine("%d : CODE(%d)", out.stage, out.result);
     uint32_t ms = 0;
 
     std::string storage_path = GET_STORAGE_PATH;
+    hw.PrintLine("%s", storage_path.c_str());
+
+    lcd.Clear();
+
+    constexpr uint32_t interval = 1;
+
+    constexpr uint32_t display_interval = 50;
+    
+    constexpr uint32_t save_interval = 50;
+    Debouncer sel_deb = Debouncer();
+    Debouncer card_deb = Debouncer();
+
+    bool prev_card = 0;
+
+    uint16_t page = RECORD_PAGE;
 
     while(1) {
-        //usb_host.Process();
-        if (ms == 1000) {
-            if (AttemptStartRecording(storage_path, rec_state) == REC_OK) {
-                hw.SetLed(true);
-            };
-        }
+        // Inputs
+        sel_deb.next(sel_but.Read());
+        card_deb.next(card_detect.Read());
+        bool sel = sel_deb.state;
+        bool card_in = !card_deb.state; 
+        bool just_started = false;
+        bool rerender_scroll = false;
+        bool rerender_page = false;
+        InputInstance pressed = input_handler.next_tick({Directions::Center, sel});
 
-        rec_state.writer.Write();
-
-        if (ms == 10000) {
-            StopRecording(rec_state);
-            hw.SetLed(false);
-        }
-        hw.DelayMs(1);
-        ms++;
-        if (ms > 1 << 30) {
-            ms = 1 << 30;
-        }
-    }
-
-}
-
-/*#include "daisy_seed.h"
-
-// Use the daisy namespace to prevent having to type
-// daisy:: before all libdaisy functions
-using namespace daisy;
-
-// Declare a DaisySeed object called hardware
-DaisySeed hardware;
-
-
-// These classes are necessary for interacting with FatFS
-SdmmcHandler sd;
-FatFSInterface fsi;
-FIL file;
-
-#define SAMPLE_RATE 48000
-#define WAV_CHANNELS 1
-#define WAV_BITS_PER_SAMPLE 12
-
-// Powers of two are best for this data buffer to keep QSPI
-// writes aligned to the sectors.
-#define WRITE_BUFFER_LEN 4096
-uint8_t write_buffer[WRITE_BUFFER_LEN];
-
-// Change this to the file you'd like to copy
-#define FILE_NAME "read_file.wav"
-#define WFILE_NAME "written_file.wav"
-
-// You can find the information on the QSPI's length
-// in the linker scripts, among other places
-#define QSPI_LEN     0x00800000U
-
-#define SECTOR_SIZE  65536
-
-void write_wav(const char* filename);
-
-void AudioCallback(
-    AudioHandle::InputBuffer in,
-    AudioHandle::OutputBuffer out,
-    size_t size
-    ) {
-    // output silence
-    // std::memcpy(&out[0][0], &in[0][0], size * sizeof(float));
-    // std::memcpy(&out[0][0], &in[0][0], size * sizeof(float));
-    // std::memcpy(&out[1][0], &in[1][0], size * sizeof(float));
-    
-    std::fill(&out[0][0], &out[0][size], 0.5f);
-    hardware.SetLed(false);
-}
-
-// TODO : Convert to USB
-void write_wav(const char* filename, const char*)
-{
-    // Initialize the SDMMC interface and FatFS drivers
-    fsi.Init(FatFSInterface::Config::MEDIA_USB);
-
-    if (f_mount(&fsi.GetSDFileSystem(), fsi.GetSDPath(), 1) != FR_OK)
-    {
-        // If some error is encountered in mounting the card, then simply return.
-        return;
-    }
-
-    if (f_open(&file, filename, FA_OPEN_EXISTING | FA_READ) != FR_OK)
-    {
-        // If some error is encountered in opening the file, then simply return.
-        f_close(&file);
-        return;
-    }
-
-    UINT data_read;
-    WAV_FormatTypeDef wav_header;
-
-    // This will populate the wav_header struct with all the data we 
-    // need to parse the wav file. Currently, the code doesn't actually use this header,
-    // but you could write code that converts from the
-    // several possible WAV storage types to int16_t or float for consistency.
-    // It seems easier to simply ensure your WAV files are all in the same format, though.
-
-    // You could also write this header along with the audio data if you'd like to
-    // parse the wav file in your actual project.
-
-    f_read(&file, &wav_header, sizeof(wav_header), &data_read);
-
-    // This helps us keep track of the QSPI address to write to
-    // between file data chunks. You can set its initial value to
-    // whatever you want -- you'll just need to remember where that
-    // is so your target application can load it from QSPI.
-    uint32_t current_qspi_offset = 0;
-
-    do
-    {
-        // This avoids attempted writes beyond the QSPI's address space
-        if (current_qspi_offset >= QSPI_LEN)
+        // handle page switching
+        switch (pressed.dir) {
+        case (Directions::Up) :
+            page = (page + 1) % PAGE_COUNT;
+            rerender_scroll = true;
             break;
+        case (Directions::Down) :
+            page = (page + (PAGE_COUNT - 1)) % PAGE_COUNT;
+            rerender_scroll = true;
+            break;
+        default :
+            break;
+        }
+
+        // we need to render the main UI
+        if (rerender_scroll) {
+            render_scroll_wheel(page, lcd);
+            rerender_page = true;
+        }
         
-        // The QSPI chip must be erased before any writes can be made,
-        // and it can only be erased in certain sizes (4K, 32K, 64K, and full chip erase).
-        // 64K is the fastest per byte without being too large, so that's what we'll use.
-        if (current_qspi_offset % SECTOR_SIZE == 0)
-        {
-            hardware.qspi.Erase(current_qspi_offset, current_qspi_offset + SECTOR_SIZE);
+
+        // card insertion and detection
+        if (card_in != prev_card) {
+            if (card_in) { // Card inserted
+
+                // mount it
+                rec_state.mounted = f_mount(& GET_STORAGE_FILE_SYSTEM,
+                    GET_STORAGE_PATH,
+                    1) == FR_OK;
+
+            } else { // Card ejected
+
+                // if recording, stop (not like we can save anyways but still)
+                if (rec_state.is_recording) {
+                    StopRecording(rec_state);
+                }
+
+                // unmount
+                f_unmount(GET_STORAGE_PATH);
+            }
+            render_recording_subsection(rec_state, lcd);
         }
-        f_read(&file, write_buffer, WRITE_BUFFER_LEN, &data_read);
+        prev_card = card_in;
 
-        hardware.qspi.Write(current_qspi_offset, data_read, write_buffer);
-        current_qspi_offset += data_read;
-    } while (data_read == WRITE_BUFFER_LEN);
+        // Actually handle stuff
+        // Recording
+        if (rec_state.mounted && page == RECORD_PAGE) {
+            // if they press in, either stop or start recording (Input Handling)
+            if (pressed.sel) {
+                if (rec_state.is_recording) {
+                    StopRecording(rec_state);
+                    hw.SetLed(false);
+                    char* start_str = "Recording Done...";
+                    lcd.String(start_str, 0, 2, ConvertColor(0xFFFFFF));
+                    hw.DelayMs(5);
+                } else {
+                    auto res = AttemptStartRecording(storage_path, rec_state);
+                    if (res == REC_OK) {
+                        hw.SetLed(true);
+                        char* start_str = "Recording Start!";
+                        lcd.String(start_str, 0, 2, ConvertColor(0xFFFFFF));
+                        hw.DelayMs(5);
+                        just_started = true;
+                    } else {
+                        hw.SetLed(false);
+                        char* start_str = "Cannot Record.";
+                        lcd.String(start_str, 0, 2, ConvertColor(0xFFFFFF));
+                        hw.DelayMs(5);
+                    };
+                }
+            }
+            // The actual recording timer
+            if (rec_state.is_recording && ((ms % (interval*display_interval)) == 0)) {
+                render_recording_timer(rec_state, lcd);
+            }
+        }
+        
 
-    f_close(&file);
-}
-
-int main(void)
-{
-    // Declare a variable to store the state we want to set for the LED.
-    bool led_state;
-    led_state = true;
-
-    // Configure and Initialize the Daisy Seed
-    // These are separate to allow reconfiguration of any of the internal
-    // components before initialization.
-    hardware.Configure();
-    hardware.Init();
-    // hardware.usb_handle.Init(UsbHandle::FS_EXTERNAL);
-    hardware.SetLed(true);
-
-    // start audio
-    size_t blocksize = 4;
-    System::Delay(1000);
-    hardware.SetAudioBlockSize(blocksize);
-    hardware.StartAudio(AudioCallback);
-
-    while (true) {
-    };
-
-    // wav writing
-    WavWriter<32768> writer;
-    
-    WavWriter<32768>::Config writer_cfg = {
-        SAMPLE_RATE,
-        WAV_CHANNELS,
-        WAV_BITS_PER_SAMPLE
-    };
-
-    writer.Init(writer_cfg);
-    
-    // testing basic writing
-    if (false) {
-        char* filename = "stupid.txt";
-
-        write_test(filename);
-    }
-
-    // testing wav file writing
-    if (false) {
-        char* wav_file = "test.wav";
-        writer.OpenFile(wav_file);
-
-        float sample;
-        for (int d = -65792; d < 65792; d++) {
-            sample = float(d) * (0.5 / 65792.0);
-            writer.Sample(&sample); // adds to buffer
-            writer.Write(); // writes if it needs to
+        if (ms % save_interval == 0) {
+            rec_state.writer.Write();
         }
 
-        writer.SaveFile();
+        hw.DelayMs(interval);
+        ms = ms + interval;
+        if (ms > (1 << 30)) {
+            ms = 1;
+        }
     }
 
-    // Loop forever
-    for(;;)
-    {
-        continue;
-        // Set the onboard LED
-        hardware.SetLed(led_state);
-
-        // Toggle the LED state for the next time around.
-        led_state = !led_state;
-
-        // Wait 500ms
-        System::Delay(100);
-    }
 }
-*/

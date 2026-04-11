@@ -1,11 +1,11 @@
-# Test
+# Blink
 
 ## Author
 
-Andrew Carlisle
+Shensley
 
 ## Description
 
-I am so awsome
+Blinks the Seed's onboard LED at a constant rate.
 
-also the desmos : [https://www.desmos.com/calculator/ksephdecuk]
+[Source Code](https://github.com/electro-smith/DaisyExamples/tree/master/seed/Blink)
