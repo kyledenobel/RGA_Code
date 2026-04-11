@@ -25,10 +25,14 @@ uLCD::Display lcd;
 
 constexpr size_t SAMPLE_RATE = 96000;
 
-constexpr size_t DELAY_STEP_SIZE = SAMPLE_RATE / 20;
+constexpr size_t DELAY_STEPS_PER_SEC = 20;
+constexpr size_t DELAY_STEP_SIZE = SAMPLE_RATE / DELAY_STEPS_PER_SEC;
 constexpr size_t DELAY_STEPS_DISABLED = 0;
-constexpr size_t DELAY_STEPS_MIN = 0;
+constexpr size_t DELAY_STEPS_MIN = 1;
 constexpr size_t DELAY_STEPS_MAX = 10;
+
+constexpr float DECAY_MIN = 1.0/32;
+constexpr float DECAY_MAX = 31.0/32;
 
 constexpr size_t HISTORY_LENGTH = 50000;
 
@@ -86,8 +90,9 @@ float history[HISTORY_LENGTH] = {0};
 int32_t curr_history_index = 0;
 int32_t curr_drop_index = 0;
 
-int delay_steps = 2;
-float delay_decay = 0.5;
+bool delay_enabled = false;
+int delay_steps = 5;
+float delay_decay = 16.0/32;
 
 bool drop_enabled = false;
 
@@ -272,7 +277,7 @@ void AudioProcessingCallback(AudioHandle::InputBuffer in,
         float sample = in[0][i];
 
         // Apply delay
-        if (delay_steps != DELAY_STEPS_DISABLED) {
+        if (delay_enabled) {
             sample += history[(curr_history_index + HISTORY_LENGTH - (delay_steps * DELAY_STEP_SIZE)) % HISTORY_LENGTH] * delay_decay;
         }
         
@@ -374,6 +379,8 @@ constexpr uint32_t SCROLL_BACKGROUND = 0x444444;
 constexpr uint32_t SCROLL_SELECTED = 0xFFFFFF;
 constexpr uint32_t SCROLL_UNSELECTED = 0xBBBBBB;
 
+constexpr uint8_t REC_SUBSECTION_START = 116;
+
 const char* REC_SCROLL_TEXT = "RECORD";
 const char* DELAY_SCROLL_TEXT = "DELAY";
 const char* DROP_SCROLL_TEXT = "DROP";
@@ -392,43 +399,47 @@ const char* GetScrollText(uint16_t page) {
     }
 }
 
-void render_scroll_wheel(uint16_t page, uLCD::Display lcd) {
+void render_scroll_wheel(uint16_t page, uLCD::Display &lcd) {
     // Clear out
-    lcd.Rect(0, 7 * 11 - 1, 0, 8 * 15 - 1, ConvertColor(SCROLL_BACKGROUND), true);
+    lcd.Rect(0, 0, 7 * 8 - 1, REC_SUBSECTION_START - 1, ConvertColor(SCROLL_BACKGROUND), true);
     // Set text background
     lcd.SetTextBackground(ConvertColor(SCROLL_BACKGROUND));
+    lcd.Stall();
 
     // Selected text
-    lcd.String(GetScrollText(page), 1, 5, ConvertColor(SCROLL_SELECTED));
+    lcd.String(GetScrollText(page), 1, 6, ConvertColor(SCROLL_SELECTED));
     // Unselected stuff
-    lcd.String(GetScrollText((page + (PAGE_COUNT - 1)) % PAGE_COUNT), 1, 3, ConvertColor(SCROLL_SELECTED));
-    lcd.String(GetScrollText((page + 1) % PAGE_COUNT), 1, 7, ConvertColor(SCROLL_SELECTED));
+    lcd.String(GetScrollText((page + (PAGE_COUNT - 1)) % PAGE_COUNT), 1, 9, ConvertColor(SCROLL_UNSELECTED));
+    lcd.String(GetScrollText((page + 1) % PAGE_COUNT), 1, 3, ConvertColor(SCROLL_UNSELECTED));
 
     lcd.SetTextBackground(0); // Set back to black
 }
 
-void render_recording_subsection(RecordingState &state, uLCD::Display lcd) {
+void render_recording_subsection(RecordingState &state, uLCD::Display &lcd) {
     // Red background if unmounted, normal background if mounted
     uint16_t bkg = state.mounted ? ConvertColor(MOUNTED_BACKGROUND) : ConvertColor(UNMOUNTED_BACKGROUND);
     lcd.SetTextBackground(bkg); // Set background
 
     // Clear it
-    lcd.Rect(0, 119, 127, 127, bkg, true);
-
+    lcd.Rect(0, REC_SUBSECTION_START, 127, 127, bkg, true);
+    lcd.Stall();
+    
+    // Status
     if (state.mounted) {
-        lcd.String("NO SRTG", 0, 15, ConvertColor(0x000000));
+        lcd.String(state.is_recording ? "RECORDING" :"WAITING", 0, 15, ConvertColor(0x000000));
     } else {
-        lcd.String("WAITING", 0, 15, ConvertColor(0x000000));
+        lcd.String("NO_STRG", 0, 15, ConvertColor(0x000000));
     }
 
     lcd.SetTextBackground(0); // Reset bkg to black
 }
 
-void render_recording_timer(RecordingState &state, uLCD::Display lcd) {
+void render_recording_timer(RecordingState &state, uLCD::Display &lcd) {
     // only bother if it is mounted
     if (!state.mounted) {
         return;
     }
+
 
     float time = state.writer.GetLengthSeconds();
 
@@ -441,27 +452,56 @@ void render_recording_timer(RecordingState &state, uLCD::Display lcd) {
     time_centisec = time_centisec % 600;
 
     char time_str[8] = "00:00.0";
-    time_str[6] = time_centisec % 10;
+    time_str[6] = '0' + (time_centisec % 10);
     time_centisec /= 10;
-    time_str[4] = time_centisec % 10;
+    time_str[4] = '0' + (time_centisec % 10);
     time_centisec /= 10;
-    time_str[3] = time_centisec % 10;
+    time_str[3] = '0' + (time_centisec % 10);
 
-    time_str[1] = time_min % 10;
-    time_str[0] = (time_min / 10) % 10;
+    time_str[1] = '0' + (time_min % 10);
+    time_str[0] = '0' + ((time_min / 10) % 10);
 
     // Red background if unmounted, normal background if mounted
     uint16_t bkg = ConvertColor(MOUNTED_BACKGROUND);
     lcd.SetTextBackground(bkg); // Set background
 
     lcd.String(time_str, 11, 15, 0x000000);
+    
+    lcd.SetTextBackground(0); // Reset bkg to black
 }
+
+void MakeDecimal(char* out, float num) {
+    int i = static_cast<int>(num * 100);
+    out[0] = '0' + ((i / 100) % 10);
+    out[1] = '.';
+    out[2] = '0' + ((i / 10) % 10);
+    out[3] = '0' + (i % 10);
+}
+
+const char* OnString = "On";
+const char* OffString = "Off";
 
 int main(void)
 {
+    char delay_str[6] = "X.XXs";
+    char decay_str[5] = "X.XX";
+
     hw.Init();
-    sel_but.Init(seed::D27, GPIO::Mode::INPUT, GPIO::Pull::NOPULL, GPIO::Speed::LOW);
-    card_detect.Init(seed::D28, GPIO::Mode::INPUT, GPIO::Pull::PULLUP, GPIO::Speed::LOW);
+    sel_but.Init(seed::D28, GPIO::Mode::INPUT, GPIO::Pull::NOPULL, GPIO::Speed::LOW);
+    card_detect.Init(seed::D27, GPIO::Mode::INPUT, GPIO::Pull::PULLUP, GPIO::Speed::LOW);
+
+    
+    // Create an ADC Channel Config object
+    AdcChannelConfig adc_config[2];
+
+    // Set up the ADC config with a connection to pin A0
+    adc_config[0].InitSingle(seed::A0);
+    adc_config[1].InitSingle(seed::A1);
+
+    // Initialize the ADC peripheral with that configuration
+    hw.adc.Init(adc_config, 2);
+    hw.adc.Start();
+
     hw.SetAudioBlockSize(16);
 
     Blink(1);
@@ -474,12 +514,11 @@ int main(void)
 
     Blink(1);
 
-    char* start_str2 = "indep text\nis cool!\0";
-    lcd.IndString(start_str2, 2, 3, ConvertColor(0xFFFFFF));
+    lcd.IndString("indep text\nis cool!\0", 2, 3, ConvertColor(0xFFFFFF));
+
     Blink(1);
 
-    char* start_str = "hello!\0";
-    lcd.String(start_str, 2, 2, ConvertColor(0xFFFFFF));
+    lcd.String( "hello!", 2, 2, ConvertColor(0xFFFFFF));
     
     Blink(1);
     
@@ -520,12 +559,11 @@ int main(void)
         return -1;
     FatFSInterface::Config fsi_cfg;
     fsi_cfg.media = MEDIA_TYPE;
-    fsi.Init(fsi_cfg);
-    auto res = f_mount(& GET_STORAGE_FILE_SYSTEM,
-        GET_STORAGE_PATH,
-        1);
+    //auto res = f_mount(& GET_STORAGE_FILE_SYSTEM,
+    //    GET_STORAGE_PATH,
+    //    1);
     // Communicate results
-    rec_state.mounted = (res == FR_OK);
+    //rec_state.mounted = (res == FR_OK);
 
     //char * name = "test.txt";
     //WriteReturnCode out = write_test(name, lcd);
@@ -546,30 +584,54 @@ int main(void)
     Debouncer sel_deb = Debouncer();
     Debouncer card_deb = Debouncer();
 
-    bool prev_card = 0;
+    bool prev_card = false;
 
     uint16_t page = RECORD_PAGE;
+    
+    bool first_run = true;
+
+    uint16_t subpage = 0;
 
     while(1) {
         // Inputs
-        sel_deb.next(sel_but.Read());
+        sel_deb.next(!sel_but.Read());
         card_deb.next(card_detect.Read());
         bool sel = sel_deb.state;
-        bool card_in = !card_deb.state; 
-        bool just_started = false;
+        bool card_in = card_deb.state; 
         bool rerender_scroll = false;
         bool rerender_page = false;
-        InputInstance pressed = input_handler.next_tick({Directions::Center, sel});
+        float x = hw.adc.GetFloat(0);
+        float y = hw.adc.GetFloat(1);
+        Directions::Directions dir = Directions::Center;
+        if (x > 0.9) {
+            dir = Directions::Right;
+        } else if (x < 0.1) {
+            dir = Directions::Left;
+        } else if (y > 0.9) {
+            dir = Directions::Up;
+        } else if (y < 0.1) {
+            dir = Directions::Down;
+        }
+
+        if (first_run) {
+            rerender_scroll = true;
+            first_run = false;
+            render_recording_subsection(rec_state, lcd);
+        }
+
+        InputInstance pressed = input_handler.next_tick({dir, sel});
 
         // handle page switching
         switch (pressed.dir) {
         case (Directions::Up) :
             page = (page + 1) % PAGE_COUNT;
             rerender_scroll = true;
+            subpage = 0;
             break;
         case (Directions::Down) :
             page = (page + (PAGE_COUNT - 1)) % PAGE_COUNT;
             rerender_scroll = true;
+            subpage = 0;
             break;
         default :
             break;
@@ -585,11 +647,14 @@ int main(void)
         // card insertion and detection
         if (card_in != prev_card) {
             if (card_in) { // Card inserted
-
-                // mount it
-                rec_state.mounted = f_mount(& GET_STORAGE_FILE_SYSTEM,
-                    GET_STORAGE_PATH,
-                    1) == FR_OK;
+                hw.DelayMs(500);
+                if (!rec_state.mounted) {
+                    fsi.Init(fsi_cfg);
+                    // mount it
+                    rec_state.mounted = f_mount(& GET_STORAGE_FILE_SYSTEM,
+                        GET_STORAGE_PATH,
+                        1) == FR_OK;
+                }
 
             } else { // Card ejected
 
@@ -600,6 +665,8 @@ int main(void)
 
                 // unmount
                 f_unmount(GET_STORAGE_PATH);
+                rec_state.mounted = false;
+                fsi.DeInit();
             }
             render_recording_subsection(rec_state, lcd);
         }
@@ -607,34 +674,140 @@ int main(void)
 
         // Actually handle stuff
         // Recording
-        if (rec_state.mounted && page == RECORD_PAGE) {
+        if (rec_state.mounted) {
             // if they press in, either stop or start recording (Input Handling)
-            if (pressed.sel) {
+            if (pressed.sel && page == RECORD_PAGE) {
+                rerender_page = true;
                 if (rec_state.is_recording) {
                     StopRecording(rec_state);
+                    render_recording_subsection(rec_state, lcd);
                     hw.SetLed(false);
-                    char* start_str = "Recording Done...";
-                    lcd.String(start_str, 0, 2, ConvertColor(0xFFFFFF));
-                    hw.DelayMs(5);
                 } else {
                     auto res = AttemptStartRecording(storage_path, rec_state);
+                    render_recording_subsection(rec_state, lcd);
                     if (res == REC_OK) {
                         hw.SetLed(true);
-                        char* start_str = "Recording Start!";
-                        lcd.String(start_str, 0, 2, ConvertColor(0xFFFFFF));
+                        render_recording_timer(rec_state, lcd);
                         hw.DelayMs(5);
-                        just_started = true;
                     } else {
                         hw.SetLed(false);
-                        char* start_str = "Cannot Record.";
-                        lcd.String(start_str, 0, 2, ConvertColor(0xFFFFFF));
                         hw.DelayMs(5);
                     };
                 }
             }
-            // The actual recording timer
-            if (rec_state.is_recording && ((ms % (interval*display_interval)) == 0)) {
+        }
+        // The actual recording timer
+        if ((ms % (interval*display_interval)) == 0) {
+            if (rec_state.is_recording) {
                 render_recording_timer(rec_state, lcd);
+            } else {
+            }
+        }
+
+        if (page == DELAY_PAGE) {
+            if (pressed.sel) {
+                subpage = (subpage + 1) % 3;
+                rerender_page = true;
+            } else {
+                switch (subpage) {
+                    case(0) :
+                    if (pressed.dir == Directions::Right || pressed.dir == Directions::Left) {
+                        delay_enabled = !delay_enabled;
+                        rerender_page = true;
+                    }
+                    break;
+                    case(1) :
+                    if (pressed.dir == Directions::Right) {
+                        delay_steps += 1;
+                        if (delay_steps > DELAY_STEPS_MAX) {
+                            delay_steps = DELAY_STEPS_MAX;
+                        }
+                        rerender_page = true;
+                    } else if (pressed.dir == Directions::Left) {
+                        delay_steps -= 1;
+                        if (delay_steps < DELAY_STEPS_MIN) {
+                            delay_steps = DELAY_STEPS_MIN;
+                        }
+                        rerender_page = true;
+                    }
+                    break;
+                    case(2) :
+                    if (pressed.dir == Directions::Right) {
+                        delay_decay += (1.0/32);
+                        if (delay_decay > DECAY_MAX) {
+                            delay_decay = DECAY_MAX;
+                        }
+                        rerender_page = true;
+                    } else if (pressed.dir == Directions::Left) {
+                        delay_decay -= (1.0/32);
+                        if (delay_decay < DECAY_MIN) {
+                            delay_decay = DECAY_MIN;
+                        }
+                        rerender_page = true;
+                    }
+                    break;
+                    default:
+                    break;
+                }
+                if (pressed.dir == Directions::Right) {
+                    
+                }
+            }
+        } else if (page == DROP_PAGE) {
+            if (pressed.sel) {
+                drop_enabled = !drop_enabled;
+                rerender_page = true;
+            }
+        }
+
+        if (rerender_page) {
+            switch (page) {
+            case(DELAY_PAGE):
+                MakeDecimal(delay_str, float(delay_steps) / DELAY_STEPS_PER_SEC);
+                MakeDecimal(decay_str, delay_decay);
+                lcd.Rect(7 * 8, 0, 127, REC_SUBSECTION_START - 1, ConvertColor(0), true);
+                lcd.Stall(3);
+                lcd.String("Enabled", 8, 2, ConvertColor(0xFFFFFF));
+                lcd.String(delay_enabled ? OnString : OffString, 9, 3, ConvertColor(0xBBBBBB));
+                {
+                    lcd.String("Delay", 8, 5, ConvertColor(0xFFFFFF));
+                    lcd.String(delay_str, 9, 6, ConvertColor(0xBBBBBB));
+                    lcd.Rect(0, 0, delay_steps*2, 5, ConvertColor(0xFFFFFF), true);
+                    lcd.Rect(delay_steps*2+1, 0, DELAY_STEPS_MAX*2, 5, ConvertColor(0x000000), true);
+                    lcd.Stall();
+                }
+                {
+                    lcd.String("Decay", 8, 8, ConvertColor(0xFFFFFF));
+                    lcd.String(decay_str, 9, 9, ConvertColor(0xBBBBBB));
+                }
+                // Selection
+                lcd.Char('<', 8, 3 + (subpage*3), ConvertColor(0xFFFFFF));
+                {
+                    const char * bruh[3] = { delay_enabled ? OnString : OffString, delay_str, decay_str };
+                    int32_t offset = strlen(bruh[subpage]);
+                    
+                    lcd.Char('>', 9+offset, 3 + (subpage*3), ConvertColor(0xFFFFFF));
+
+                }
+                break;
+            case(DROP_PAGE):
+                lcd.Rect(7 * 8, 0, 127, REC_SUBSECTION_START - 1, ConvertColor(0), true);
+                lcd.Stall(3);
+                lcd.String("Enabled", 8, 5, ConvertColor(0xFFFFFF));
+                lcd.String(drop_enabled ? OnString : OffString, 9, 6, ConvertColor(0xBBBBBB));
+                break;
+            case(RECORD_PAGE):
+                lcd.Rect(7 * 8, 0, 127, REC_SUBSECTION_START - 1, ConvertColor(0), true);
+                lcd.Stall(3);
+                {
+                    char rec_str[10] = "Recording";
+                    char not_str[14] = "Not\nRecording";
+                    lcd.String(rec_state.is_recording ? rec_str : not_str, 9, 6, rec_state.is_recording ? ConvertColor(0xFFFFFF) : ConvertColor(0xBBBBBB));
+                }
+                break;
+            default :
+                lcd.Rect(7 * 8, 0, 127, REC_SUBSECTION_START - 1, ConvertColor(0), true);
+                break;
             }
         }
         

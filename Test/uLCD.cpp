@@ -134,7 +134,6 @@ Result Display::SetFont(uint8_t font) {
         0,
         font
     };
-    return Result::OK;
     if (WriteCMD(cmd, 3) == Result::ERR) return Result::ERR;
     return CheckAck();
 
@@ -146,7 +145,8 @@ Result Display::SetTextColor(uint16_t color) {
         (color >> 8) & 0xFF,
         color & 0xFF
     };
-    return WriteCMD(cmd, 3);
+    if (WriteCMD(cmd, 3) == Result::ERR) return Result::ERR;
+    return CheckAck();
 }
 Result Display::SetTextBackground(uint16_t color) {
     uint8_t cmd[3] = {
@@ -154,7 +154,8 @@ Result Display::SetTextBackground(uint16_t color) {
         (color >> 8) & 0xFF,
         color & 0xFF
     };
-    return WriteCMD(cmd, 3);
+    if (WriteCMD(cmd, 3) == Result::ERR) return Result::ERR;
+    return CheckAck();
 }
 
 Result Display::MoveCursor(int8_t row, int8_t col) {
@@ -171,7 +172,9 @@ Result Display::MoveCursor(int8_t row, int8_t col) {
 
 Result Display::Char(char c, int8_t col, int8_t row) {
     // Go to where text should go
-    if (MoveCursor(row, col) == Result::ERR) return Result::ERR;
+    if (MoveCursor(row, col) == Result::ERR) {
+        //return Result::ERR
+    };
     // Wait a moment (may be not needed, test)
     hw->DelayMs(SPACED_DELAY_MS);
 
@@ -186,9 +189,13 @@ Result Display::Char(char c, int8_t col, int8_t row) {
 
 Result Display::Char(char c, int8_t col, int8_t row, uint16_t color) {
     // text color
-    if (SetTextColor(color) == Result::ERR) return Result::ERR;
+    if (SetTextColor(color) == Result::ERR) {
+        //return Result::ERR
+    };
     // Go to where text should go
-    if (MoveCursor(row, col) == Result::ERR) return Result::ERR;
+    if (MoveCursor(row, col) == Result::ERR) {
+        //return Result::ERR
+    };
     // Wait a moment (may be not needed, test)
     hw->DelayMs(SPACED_DELAY_MS);
 
@@ -222,12 +229,16 @@ Result Display::IndString(const char *s, int8_t col, int8_t row, uint16_t color)
 
 Result Display::String(const char *s, int8_t col, int8_t row, uint16_t color) {
     // Go to where text should go
-    if (MoveCursor(row, col) == Result::ERR) return Result::ERR;
+    if (MoveCursor(row, col) == Result::ERR) {
+        //return Result::ERR;
+    }
     // Wait a moment (may be not needed, test)
     hw->DelayMs(SPACED_DELAY_MS);
 
     // Set color (delay to give time to update before writing string)
-    if (SetTextColor(color) == Result::ERR) return Result::ERR;
+    if (SetTextColor(color) == Result::ERR) {
+        //return Result::ERR;
+    }
     hw->DelayMs(SPACED_DELAY_MS);
 
     uint8_t cmd[MAX_STRING_CMD_LEN] = "";

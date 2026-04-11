@@ -6,7 +6,7 @@
 
 #define TIMEOUT_MS 2
 #define SPACED_DELAY_MS 1
-#define CLEAR_DELAY_MS 5
+#define CLEAR_DELAY_MS 200
 
 #define RESET_TIME_MS 8
 #define POST_RESET_DELAY_MS 3200
@@ -55,6 +55,8 @@ constexpr uint16_t BaudCodetoRate(BAUDS baud) {
 #define MAX_STRING_CMD_LEN 128
 #define MAX_IND_STRING_LEN 512
 
+#define STALL_MS 10
+
 namespace uLCD {
 
 	typedef daisy::UartHandler::Result Result;
@@ -85,6 +87,13 @@ namespace uLCD {
 			hw->DelayMs(RESET_TIME_MS); // Actually reset
 			rst.Write(true); // Pull reset high (Off)
 			hw->DelayMs(POST_RESET_DELAY_MS); // Wait for screen to reset
+		}
+
+		inline void Stall() {
+			hw->DelayMs(STALL_MS);
+		}
+		inline void Stall(int count) {
+			hw->DelayMs(STALL_MS * count);
 		}
 
 		// Basic wrappers
