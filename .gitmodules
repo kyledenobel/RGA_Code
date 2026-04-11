@@ -1,0 +1,12 @@
+[submodule "analog_controller/lib/ARM/CMSIS"]
+	path = analog_controller/lib/ARM/CMSIS
+	url = https://github.gatech.edu/GTSR/CMSIS-STMG474.git
+[submodule "analog_controller/lib/GTSR/stmlibs"]
+	path = analog_controller/lib/GTSR/stmlibs
+	url = https://github.gatech.edu/GTSR/stmlibs.git
+[submodule "analog_controller/lib/ST/STM32G4xx_HAL_Driver"]
+	path = analog_controller/lib/ST/STM32G4xx_HAL_Driver
+	url = https://github.gatech.edu/GTSR/STMG4xx_HAL_Driver.git
+[submodule "analog_controller/lib/third-party/printf"]
+	path = analog_controller/lib/third-party/printf
+	url = https://github.gatech.edu/GTSR/printf.git
