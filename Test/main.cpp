@@ -34,14 +34,14 @@ constexpr size_t DELAY_STEPS_MAX = 10;
 constexpr float DECAY_MIN = 1.0/32;
 constexpr float DECAY_MAX = 31.0/32;
 
-constexpr size_t HISTORY_LENGTH = 50000;
+constexpr size_t HISTORY_LENGTH = 48000;
 
 
 // easy to adjust by just multiplying it
-#define DROP_WINDOW 2340
+constexpr size_t DROP_WINDOW = 7680;
 // derived as HISTORY_LENGTH * DROP_WINDOW / gcf(HISTORY_LENGTH, DROP_WINDOW)
 // ensures smooth operation of drop with a non-multiple sized history
-#define DROP_WRAPAROUND 5850000
+constexpr size_t DROP_WRAPAROUND = HISTORY_LENGTH * DROP_WINDOW;
 
 constexpr int32_t DROP_OFFSET_A = DROP_WINDOW;
 constexpr int32_t DROP_OFFSET_B = (DROP_WINDOW + DROP_WINDOW/2);
@@ -95,6 +95,21 @@ int delay_steps = 5;
 float delay_decay = 16.0/32;
 
 bool drop_enabled = false;
+constexpr float drop_rho = 1.0;
+constexpr float drop_gamma = 0.5;
+constexpr float drop_S = DROP_WINDOW / 2.0;
+// constants for first part of cubic
+constexpr float drop_a = -3.5349e-11;
+constexpr float drop_b = 2.0366e-07;
+constexpr float drop_c = -4.0722e-07;
+constexpr float drop_d = 2.0359e-07;
+
+// constants for second part of cubic
+constexpr float drop_aa = 3.5321e-11;
+constexpr float drop_bb = -6.1035e-07;
+constexpr float drop_cc = 3.1250e-03;
+constexpr float drop_dd = -4;
+
 
 RecordingState rec_state = RecordingState();
 
@@ -228,7 +243,20 @@ inline int32_t DropSampleFunction(int32_t i, const int32_t d) {
     return a + b * DROP_WINDOW;
 }
 
-inline int32_t DropRatioFunction(int32_t i) {
+inline float DropRatioFunction(float k) {
+    float res = 0;
+    float kk = k * k;
+    float kkk = kk * k;
+    if (k < drop_rho*drop_S) {
+        res = drop_a * kkk + drop_b * kk + drop_c * k + drop_d;
+    } else if (k <= drop_S) {
+        res = 1;
+    } else {
+        res = drop_aa * kkk + drop_bb * kk + drop_cc * k + drop_dd;
+    }
+    return res;
+}
+inline float DropRatioFunctionOld(int32_t i) {
     constexpr float cutoff_multiplier = 20;
     i += DROP_WINDOW/2;
     float res = (2 * (i % DROP_WINDOW) / DROP_WINDOW);
@@ -257,9 +285,10 @@ inline float Drop(int32_t i) {
     float sample_a = history[(i_a + HISTORY_LENGTH) % HISTORY_LENGTH];
     float sample_b = history[(i_b + HISTORY_LENGTH) % HISTORY_LENGTH];
 
-    float r = DropRatioFunction(i);
+    float r_a = DropRatioFunction(i % DROP_WINDOW);
+    float r_b = DropRatioFunction((i + DROP_WINDOW/2) % DROP_WINDOW);
 
-    return sample_a * r + sample_b * (1 - r);
+    return sample_a * r_a + sample_b * r_b;
 }
 
 void AudioProcessingCallback(AudioHandle::InputBuffer in,
@@ -766,15 +795,12 @@ int main(void)
                 MakeDecimal(delay_str, float(delay_steps) / DELAY_STEPS_PER_SEC);
                 MakeDecimal(decay_str, delay_decay);
                 lcd.Rect(7 * 8, 0, 127, REC_SUBSECTION_START - 1, ConvertColor(0), true);
-                lcd.Stall(3);
+                lcd.Stall();
                 lcd.String("Enabled", 8, 2, ConvertColor(0xFFFFFF));
                 lcd.String(delay_enabled ? OnString : OffString, 9, 3, ConvertColor(0xBBBBBB));
                 {
                     lcd.String("Delay", 8, 5, ConvertColor(0xFFFFFF));
-                    lcd.String(delay_str, 9, 6, ConvertColor(0xBBBBBB));
-                    lcd.Rect(0, 0, delay_steps*2, 5, ConvertColor(0xFFFFFF), true);
-                    lcd.Rect(delay_steps*2+1, 0, DELAY_STEPS_MAX*2, 5, ConvertColor(0x000000), true);
-                    lcd.Stall();
+                    lcd.String(delay_str, 9, 6, ConvertColor(0xBBBBBB));\
                 }
                 {
                     lcd.String("Decay", 8, 8, ConvertColor(0xFFFFFF));
@@ -792,13 +818,12 @@ int main(void)
                 break;
             case(DROP_PAGE):
                 lcd.Rect(7 * 8, 0, 127, REC_SUBSECTION_START - 1, ConvertColor(0), true);
-                lcd.Stall(3);
-                lcd.String("Enabled", 8, 5, ConvertColor(0xFFFFFF));
-                lcd.String(drop_enabled ? OnString : OffString, 9, 6, ConvertColor(0xBBBBBB));
+                lcd.Stall();
+                lcd.String(drop_enabled ? OnString : OffString, 9, 6, drop_enabled ? ConvertColor(0xFFFFFF) : ConvertColor(0xBBBBBB));
                 break;
             case(RECORD_PAGE):
                 lcd.Rect(7 * 8, 0, 127, REC_SUBSECTION_START - 1, ConvertColor(0), true);
-                lcd.Stall(3);
+                lcd.Stall();
                 {
                     char rec_str[10] = "Recording";
                     char not_str[14] = "Not\nRecording";
