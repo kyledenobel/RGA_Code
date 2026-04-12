@@ -31,7 +31,7 @@ constexpr size_t DELAY_STEPS_DISABLED = 0;
 constexpr size_t DELAY_STEPS_MIN = 1;
 constexpr size_t DELAY_STEPS_MAX = 10;
 
-constexpr float DECAY_MIN = 1.0/32;
+constexpr float DECAY_MIN = 4.0/32;
 constexpr float DECAY_MAX = 31.0/32;
 
 constexpr size_t HISTORY_LENGTH = 48000;
@@ -95,6 +95,8 @@ int delay_steps = 5;
 float delay_decay = 16.0/32;
 
 bool drop_enabled = false;
+
+// Drop cubic window math
 constexpr float drop_rho = 1.0;
 constexpr float drop_gamma = 0.5;
 constexpr float drop_S = DROP_WINDOW / 2.0;
@@ -244,17 +246,16 @@ inline int32_t DropSampleFunction(int32_t i, const int32_t d) {
 }
 
 inline float DropRatioFunction(float k) {
-    float res = 0;
+    k = k + 1; // put in line with matlab
     float kk = k * k;
     float kkk = kk * k;
     if (k < drop_rho*drop_S) {
-        res = drop_a * kkk + drop_b * kk + drop_c * k + drop_d;
+        return drop_a * kkk + drop_b * kk + drop_c * k + drop_d;
     } else if (k <= drop_S) {
-        res = 1;
+        return 1;
     } else {
-        res = drop_aa * kkk + drop_bb * kk + drop_cc * k + drop_dd;
+        return drop_aa * kkk + drop_bb * kk + drop_cc * k + drop_dd;
     }
-    return res;
 }
 inline float DropRatioFunctionOld(int32_t i) {
     constexpr float cutoff_multiplier = 20;
@@ -285,10 +286,9 @@ inline float Drop(int32_t i) {
     float sample_a = history[(i_a + HISTORY_LENGTH) % HISTORY_LENGTH];
     float sample_b = history[(i_b + HISTORY_LENGTH) % HISTORY_LENGTH];
 
-    float r_a = DropRatioFunction(i % DROP_WINDOW);
-    float r_b = DropRatioFunction((i + DROP_WINDOW/2) % DROP_WINDOW);
+    float r = DropRatioFunction(i % DROP_WINDOW);
 
-    return sample_a * r_a + sample_b * r_b;
+    return sample_a * r + sample_b * (1.0 - r);
 }
 
 void AudioProcessingCallback(AudioHandle::InputBuffer in,
