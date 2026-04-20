@@ -99,14 +99,14 @@ freq = fs./wavelengths(2, :);
 freq(freq > 400) = 0;
 freq(freq < 20) = 0;
 %   plot(wavelengths(4, :), fs./wavelengths(1, :))
-plot(wavelengths(4, :), freq)
+plot(wavelengths(4, :)/fs, freq)
 freq = fs./wavelengths2(2, :);
 freq(freq > 400) = 0;
 freq(freq < 20) = 0;
-plot(wavelengths2(4, :), freq)
+%plot(wavelengths2(4, :)/fs, freq)
 
 x = x(slice);
-plot(slice, 100*(x))
+plot(slice/fs, 100*(x))
 %%
 t = zeros(1, N);
 t(peaks) = 1;
