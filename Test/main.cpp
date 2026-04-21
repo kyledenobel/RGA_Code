@@ -4,6 +4,7 @@
 #include <string.h>
 #include "uLCD.h"
 #include "Inputs.h"
+#include "Tuner.h"
 
 using namespace daisy;
 using uLCD::ConvertColor;
@@ -52,8 +53,8 @@ enum Pages {
     RECORD_PAGE = 0,
     DELAY_PAGE,
     DROP_PAGE,
+    TUNER_PAGE,
     PAGE_COUNT,
-    TUNER_PAGE
 };
 
 enum RecordingCode {
@@ -68,6 +69,7 @@ enum RecordingCode {
 };
 
 typedef WavWriter<32768/2> WavWriterT;
+typedef Tuner<SAMPLE_RATE/40> TunerT;
 
 struct RecordingState {
     bool mounted = false;
@@ -96,6 +98,8 @@ float delay_decay = 16.0/32;
 
 bool drop_enabled = false;
 
+bool tuner_enabled = false;
+
 // Drop cubic window math
 constexpr float drop_rho = 1.0;
 constexpr float drop_gamma = 0.5;
@@ -114,6 +118,8 @@ constexpr float drop_dd = -4;
 
 
 RecordingState rec_state = RecordingState();
+
+TunerT tuner = TunerT();
 
 GPIO sel_but;
 GPIO card_detect;
@@ -305,6 +311,10 @@ void AudioProcessingCallback(AudioHandle::InputBuffer in,
         // Sample input
         float sample = in[0][i];
 
+        if (tuner_enabled) {
+            tuner.Sample(sample);
+        }
+
         // Apply delay
         if (delay_enabled) {
             sample += history[(curr_history_index + HISTORY_LENGTH - (delay_steps * DELAY_STEP_SIZE)) % HISTORY_LENGTH] * delay_decay;
@@ -413,6 +423,7 @@ constexpr uint8_t REC_SUBSECTION_START = 116;
 const char* REC_SCROLL_TEXT = "RECORD";
 const char* DELAY_SCROLL_TEXT = "DELAY";
 const char* DROP_SCROLL_TEXT = "DROP";
+const char* TUNE_SCROLL_TEXT = "TUNE";
 const char* UNKNOWN_TEXT = "UNKWN";
 
 const char* GetScrollText(uint16_t page) {
@@ -423,6 +434,8 @@ const char* GetScrollText(uint16_t page) {
         return DELAY_SCROLL_TEXT;
         case (DROP_PAGE):
         return DROP_SCROLL_TEXT;
+        case (TUNER_PAGE):
+        return TUNE_SCROLL_TEXT;
         default :
         return UNKNOWN_TEXT;
     }
@@ -550,6 +563,8 @@ int main(void)
     lcd.String( "hello!", 2, 2, ConvertColor(0xFFFFFF));
     
     Blink(1);
+
+    tuner = TunerT(hw.AudioSampleRate());
     
     WavWriterT::Config wav_cfg = {
         hw.AudioSampleRate() / 4, // we record at half speed due to drop existing
@@ -729,9 +744,17 @@ int main(void)
         if ((ms % (interval*display_interval)) == 0) {
             if (rec_state.is_recording) {
                 render_recording_timer(rec_state, lcd);
+            } else if (page == TUNER_PAGE) {
+                char TunerFreq[12] = "";
+                
+                snprintf(TunerFreq, 12, "%5.1f", tuner.get_curr_freq());
+                lcd.String(TunerFreq, 9, 6, rec_state.is_recording ? ConvertColor(0xFFFFFF) : ConvertColor(0xBBBBBB));
             } else {
+
             }
         }
+
+        tuner_enabled = page == TUNER_PAGE;
 
         if (page == DELAY_PAGE) {
             if (pressed.sel) {
@@ -828,6 +851,16 @@ int main(void)
                     char rec_str[10] = "Recording";
                     char not_str[14] = "Not\nRecording";
                     lcd.String(rec_state.is_recording ? rec_str : not_str, 9, 6, rec_state.is_recording ? ConvertColor(0xFFFFFF) : ConvertColor(0xBBBBBB));
+                }
+                break;
+            case(TUNER_PAGE):
+                lcd.Rect(7 * 8, 0, 127, REC_SUBSECTION_START - 1, ConvertColor(0), true);
+                lcd.Stall();
+                {
+                    char TunerFreq[12] = "";
+                    
+                    snprintf(TunerFreq, 12, "%.1f", tuner.get_curr_freq());
+                    lcd.String(TunerFreq, 9, 6, rec_state.is_recording ? ConvertColor(0xFFFFFF) : ConvertColor(0xBBBBBB));
                 }
                 break;
             default :
