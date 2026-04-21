@@ -38,7 +38,7 @@ for i= max_window:N
         start = true;
     end
     % What are we using as reference for what our peaks should be
-    max_i = max(floor(i/max_window) - 1, 1);
+    max_i = max(floor(i/max_window), 1);
     high_target = max_val(max_i) * target_relative_amp;
     low_target = min_val(max_i) * target_relative_amp;
     mid_target = max_val(max_i) + abs(min_val(max_i)) * low_relative_amp / 2;
@@ -107,12 +107,4 @@ freq(freq < 20) = 0;
 
 x = x(slice);
 plot(slice/fs, 100*(x))
-%%
-t = zeros(1, N);
-t(peaks) = 1;
-
-
-t = t(slice);
-
-plot(slice, t)
 
