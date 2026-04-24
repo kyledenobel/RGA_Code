@@ -23,6 +23,27 @@ DaisySeed hw;
 uLCD::Display lcd;
 //USBHostHandle usb_host;
 
+// PIN DEFINITIONS
+
+    // UART (SCREEN)
+#define LCD_TX_PIN seed::D13
+#define LCD_RX_PIN seed::D14
+#define LCD_RST_PIN seed::D27
+#define LCD_UART UartHandler::Config::Peripheral::USART_1
+
+    // DIGITAL OUTPUTS
+#define BYPASS_PIN seed::D10
+#define OUTPUT_PIN seed::D11
+
+    // JOYSTICK
+#define JOY_Y_PIN seed::A1
+#define JOY_X_PIN seed::A0
+#define JOY_SELECT_PIN seed::D28
+
+    // SD CARD
+// NOTE : All Pins except Card Detect are hardcoded
+#define CARD_DETECT_PIN seed::D9
+
 
 constexpr size_t SAMPLE_RATE = 96000;
 
@@ -54,6 +75,8 @@ enum Pages {
     DELAY_PAGE,
     DROP_PAGE,
     TUNER_PAGE,
+    BYPASS_PAGE,
+    OUTPUT_PAGE,
     PAGE_COUNT,
 };
 
@@ -100,6 +123,10 @@ bool drop_enabled = false;
 
 bool tuner_enabled = false;
 
+bool bypass_enabled = false;
+
+bool output_enabled = false;
+
 // Drop cubic window math
 constexpr float drop_rho = 1.0;
 constexpr float drop_gamma = 0.5;
@@ -123,6 +150,9 @@ TunerT tuner = TunerT();
 
 GPIO sel_but;
 GPIO card_detect;
+GPIO bypass_switch;
+GPIO output_switch;
+
 InputHandler input_handler;
 /// Checks if a file exists
 RecordingCode file_exists(const char* path) {
@@ -144,6 +174,7 @@ RecordingCode file_exists(const char* path) {
     f_close(&file);
     return REC_STORAGE_ERROR;
 }
+
 
 // each blink is ~0.2 seconds
 void Blink(size_t num) {
@@ -424,6 +455,8 @@ const char* REC_SCROLL_TEXT = "RECORD";
 const char* DELAY_SCROLL_TEXT = "DELAY";
 const char* DROP_SCROLL_TEXT = "DROP";
 const char* TUNE_SCROLL_TEXT = "TUNE";
+const char* BYPASS_SCROLL_TEXT = "BYPASS";
+const char* OUTPUT_SCROLL_TEXT = "OUTPUT";
 const char* UNKNOWN_TEXT = "UNKWN";
 
 const char* GetScrollText(uint16_t page) {
@@ -436,6 +469,10 @@ const char* GetScrollText(uint16_t page) {
         return DROP_SCROLL_TEXT;
         case (TUNER_PAGE):
         return TUNE_SCROLL_TEXT;
+        case (BYPASS_PAGE):
+        return BYPASS_SCROLL_TEXT;
+        case (OUTPUT_PAGE):
+        return OUTPUT_SCROLL_TEXT;
         default :
         return UNKNOWN_TEXT;
     }
@@ -519,6 +556,19 @@ void MakeDecimal(char* out, float num) {
     out[2] = '0' + ((i / 10) % 10);
     out[3] = '0' + (i % 10);
 }
+void MakeDecimalLong(char* out, float num) {
+    if (num > 999.0f) {
+        num = 999.0f;
+    }
+    int i = static_cast<int>(num * 100);
+    out[0] = '0' + ((i / 10000) % 10);
+    out[1] = '0' + ((i / 1000) % 10);
+    out[2] = '0' + ((i / 100) % 10);
+    out[3] = '.';
+    out[4] = '0' + ((i / 10) % 10);
+    out[5] = '0' + (i % 10);
+    out[6] = TERMINATOR_CHAR;
+}
 
 const char* OnString = "On";
 const char* OffString = "Off";
@@ -529,16 +579,18 @@ int main(void)
     char decay_str[5] = "X.XX";
 
     hw.Init();
-    sel_but.Init(seed::D28, GPIO::Mode::INPUT, GPIO::Pull::NOPULL, GPIO::Speed::LOW);
-    card_detect.Init(seed::D27, GPIO::Mode::INPUT, GPIO::Pull::PULLUP, GPIO::Speed::LOW);
+    sel_but.Init(JOY_SELECT_PIN, GPIO::Mode::INPUT, GPIO::Pull::NOPULL, GPIO::Speed::LOW);
+    card_detect.Init(CARD_DETECT_PIN, GPIO::Mode::INPUT, GPIO::Pull::PULLUP, GPIO::Speed::LOW);
+    bypass_switch.Init(BYPASS_PIN, GPIO::Mode::OUTPUT, GPIO::Pull::PULLDOWN, GPIO::Speed::LOW);
+    output_switch.Init(OUTPUT_PIN, GPIO::Mode::OUTPUT, GPIO::Pull::PULLDOWN, GPIO::Speed::LOW);
 
     
     // Create an ADC Channel Config object
     AdcChannelConfig adc_config[2];
 
     // Set up the ADC config with a connection to pin A0
-    adc_config[0].InitSingle(seed::A0);
-    adc_config[1].InitSingle(seed::A1);
+    adc_config[0].InitSingle(JOY_X_PIN); // X Joy
+    adc_config[1].InitSingle(JOY_Y_PIN); // Y Joy
 
     // Initialize the ADC peripheral with that configuration
     hw.adc.Init(adc_config, 2);
@@ -548,7 +600,7 @@ int main(void)
 
     Blink(1);
     
-    lcd.Init(&hw, seed::D12, seed::D11, UartHandler::Config::Peripheral::UART_4, seed::D10, BAUDS::OK);
+    lcd.Init(&hw, LCD_TX_PIN, LCD_RX_PIN, LCD_UART, LCD_RST_PIN, BAUDS::OK);
 
     lcd.Line(50, 50, 40, 80, ConvertColor(0xFFFFFF));
     
@@ -564,7 +616,7 @@ int main(void)
     
     Blink(1);
 
-    tuner = TunerT(hw.AudioSampleRate());
+    tuner.Init(hw.AudioSampleRate());
     
     WavWriterT::Config wav_cfg = {
         hw.AudioSampleRate() / 4, // we record at half speed due to drop existing
@@ -639,7 +691,7 @@ int main(void)
     while(1) {
         // Inputs
         sel_deb.next(!sel_but.Read());
-        card_deb.next(card_detect.Read());
+        card_deb.next(true);//card_detect.Read());
         bool sel = sel_deb.state;
         bool card_in = card_deb.state; 
         bool rerender_scroll = false;
@@ -745,10 +797,10 @@ int main(void)
             if (rec_state.is_recording) {
                 render_recording_timer(rec_state, lcd);
             } else if (page == TUNER_PAGE) {
-                char TunerFreq[12] = "";
+                char TunerFreq[8] = { 0 };
                 
-                snprintf(TunerFreq, 12, "%5.1f", tuner.get_curr_freq());
-                lcd.String(TunerFreq, 9, 6, rec_state.is_recording ? ConvertColor(0xFFFFFF) : ConvertColor(0xBBBBBB));
+                MakeDecimalLong(TunerFreq, tuner.get_curr_freq());
+                lcd.String(TunerFreq, 9, 6, ConvertColor(0xFFFFFF));
             } else {
 
             }
@@ -810,6 +862,18 @@ int main(void)
                 drop_enabled = !drop_enabled;
                 rerender_page = true;
             }
+        } else if (page == BYPASS_PAGE) {
+            if (pressed.sel) {
+                bypass_enabled = !bypass_enabled;
+                rerender_page = true;
+                bypass_switch.Write(bypass_enabled);
+            }
+        } else if (page == OUTPUT_PAGE) {
+            if (pressed.sel) {
+                output_enabled = !output_enabled;
+                rerender_page = true;
+                output_switch.Write(output_enabled);
+            }
         }
 
         if (rerender_page) {
@@ -857,10 +921,28 @@ int main(void)
                 lcd.Rect(7 * 8, 0, 127, REC_SUBSECTION_START - 1, ConvertColor(0), true);
                 lcd.Stall();
                 {
-                    char TunerFreq[12] = "";
+                    char TunerFreq[8] = { 0 };
                     
-                    snprintf(TunerFreq, 12, "%.1f", tuner.get_curr_freq());
-                    lcd.String(TunerFreq, 9, 6, rec_state.is_recording ? ConvertColor(0xFFFFFF) : ConvertColor(0xBBBBBB));
+                    MakeDecimalLong(TunerFreq, tuner.get_curr_freq());
+                    lcd.String(TunerFreq, 9, 6, ConvertColor(0xFFFFFF));
+                }
+                break;
+            case(BYPASS_PAGE):
+                lcd.Rect(7 * 8, 0, 127, REC_SUBSECTION_START - 1, ConvertColor(0), true);
+                lcd.Stall();
+                {
+                    char on_str[10] = "Bypassing";
+                    char off_str[9] = "Disabled";
+                    lcd.String(bypass_enabled ? on_str : off_str, 9, 6, bypass_enabled ? ConvertColor(0xFFFFFF) : ConvertColor(0xBBBBBB));
+                }
+                break;
+            case(OUTPUT_PAGE):
+                lcd.Rect(7 * 8, 0, 127, REC_SUBSECTION_START - 1, ConvertColor(0), true);
+                lcd.Stall();
+                {
+                    char on_str[11] = "Headphones";
+                    char off_str[8] = "Speaker";
+                    lcd.String(output_enabled ? on_str : off_str, 9, 6, output_enabled ? ConvertColor(0xFFFFFF) : ConvertColor(0xBBBBBB));
                 }
                 break;
             default :

@@ -8,7 +8,7 @@ constexpr float TUNER_TARGET_REL_AMP_LOW = 0.2;
 constexpr float ROLLING_AVERAGE_RATIO = 0.4;
 
 constexpr size_t DELTA_HISTORY_SIZE = 5;
-constexpr size_t DELTA_HISTORY_TARGET = (DELTA_HISTORY_SIZE + 1) / 2;
+constexpr size_t DELTA_HISTORY_TARGET = (DELTA_HISTORY_SIZE) / 2;
 
 constexpr float cutoff = 1e-3;
 
@@ -102,6 +102,12 @@ public:
         min_sample_gap = fs / max_freq;
     }
 
+    void Init(size_t fs) {
+        this->fs = fs;
+        size_t max_freq = 600;
+        min_sample_gap = fs / max_freq;
+    }
+
     void Sample(float sample) {
         // Handle sectors
         if (h_i == 0) {
@@ -150,6 +156,7 @@ public:
         
         // deal with history (required at the end of all return paths)
         history_iterate(sample);
+        return;
     }
 
     float get_curr_freq() const {
