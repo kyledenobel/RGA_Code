@@ -42,10 +42,10 @@ uLCD::Display lcd;
 
     // SD CARD
 // NOTE : All Pins except Card Detect are hardcoded
-#define CARD_DETECT_PIN seed::D9
+#define CARD_DETECT_PIN seed::D18
 
 
-constexpr size_t SAMPLE_RATE = 96000;
+constexpr size_t SAMPLE_RATE = 48000; // expected sample rate, not actual
 
 constexpr size_t DELAY_STEPS_PER_SEC = 20;
 constexpr size_t DELAY_STEP_SIZE = SAMPLE_RATE / DELAY_STEPS_PER_SEC;
@@ -556,18 +556,25 @@ void MakeDecimal(char* out, float num) {
     out[2] = '0' + ((i / 10) % 10);
     out[3] = '0' + (i % 10);
 }
-void MakeDecimalLong(char* out, float num) {
+
+constexpr size_t LONG_DECIMAL_SIZE = 9;
+void MakeDecimalLong(char* out, float num, bool show_pos=false) {
     if (num > 999.0f) {
         num = 999.0f;
     }
-    int i = static_cast<int>(num * 100);
-    out[0] = '0' + ((i / 10000) % 10);
-    out[1] = '0' + ((i / 1000) % 10);
-    out[2] = '0' + ((i / 100) % 10);
-    out[3] = '.';
-    out[4] = '0' + ((i / 10) % 10);
-    out[5] = '0' + (i % 10);
-    out[6] = TERMINATOR_CHAR;
+    if (num < -999.0f) {
+        num = -999.0f;
+    }
+    int32_t i = static_cast<int32_t>(num * 100);
+    out[0] = i < 0 ? '-' : (show_pos ? '+' : ' ');
+    i = abs(i);
+    out[1] = '0' + ((i / 10000) % 10);
+    out[2] = '0' + ((i / 1000) % 10);
+    out[3] = '0' + ((i / 100) % 10);
+    out[4] = '.';
+    out[5] = '0' + ((i / 10) % 10);
+    out[6] = '0' + (i % 10);
+    out[7] = TERMINATOR_CHAR;
 }
 
 const char* OnString = "On";
@@ -616,10 +623,10 @@ int main(void)
     
     Blink(1);
 
-    tuner.Init(hw.AudioSampleRate());
+    tuner.Init(static_cast<size_t>(hw.AudioSampleRate()));
     
     WavWriterT::Config wav_cfg = {
-        hw.AudioSampleRate() / 4, // we record at half speed due to drop existing
+        hw.AudioSampleRate() / 2, // we record at half speed due to drop existing
         WAV_CHANNELS,
         WAV_BITS_PER_SAMPLE,
     };
@@ -639,6 +646,7 @@ int main(void)
     for (int i = 0; i < 1; i++) {
         usb_host.Process();
     } */
+    //hw.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_96KHZ);
     hw.StartAudio(AudioProcessingCallback);
      
     // Enable Logging, and set up the USB connection.
@@ -649,7 +657,7 @@ int main(void)
     sd_cfg.Defaults();
     sd_cfg.clock_powersave = false;
 	sd_cfg.width = SdmmcHandler::BusWidth::BITS_1;
-    sd_cfg.speed = daisy::SdmmcHandler::Speed::VERY_FAST;
+    sd_cfg.speed = daisy::SdmmcHandler::Speed::STANDARD;
     auto sd_res = sd.Init(sd_cfg);
     if (sd_res == SdmmcHandler::Result::ERROR)
         return -1;
@@ -682,7 +690,7 @@ int main(void)
 
     bool prev_card = false;
 
-    uint16_t page = RECORD_PAGE;
+    uint16_t page = TUNER_PAGE;
     
     bool first_run = true;
 
@@ -691,7 +699,7 @@ int main(void)
     while(1) {
         // Inputs
         sel_deb.next(!sel_but.Read());
-        card_deb.next(true);//card_detect.Read());
+        card_deb.next(card_detect.Read());
         bool sel = sel_deb.state;
         bool card_in = card_deb.state; 
         bool rerender_scroll = false;
@@ -797,10 +805,17 @@ int main(void)
             if (rec_state.is_recording) {
                 render_recording_timer(rec_state, lcd);
             } else if (page == TUNER_PAGE) {
-                char TunerFreq[8] = { 0 };
-                
-                MakeDecimalLong(TunerFreq, tuner.get_curr_freq());
-                lcd.String(TunerFreq, 9, 6, ConvertColor(0xFFFFFF));
+                    char TunerFreq[LONG_DECIMAL_SIZE] = { 0 };
+                    char OffsetFreq[LONG_DECIMAL_SIZE] = { 0 };
+                    float freq = tuner.get_curr_freq();
+                    GuitarNotes note = NoteDetection(freq);
+                    float offset = NoteOffset(freq, note);
+                    
+                    MakeDecimalLong(TunerFreq, freq);
+                    MakeDecimalLong(OffsetFreq, offset, true);
+                    lcd.String(TunerFreq, 9, 6, ConvertColor(0xFFFFFF));
+                    lcd.String(NoteToString(note), 9, 7, ConvertColor(0xFFFFFF));
+                    lcd.String(OffsetFreq, 11, 7, ConvertColor(0xFFFFFF));
             } else {
 
             }
@@ -921,10 +936,17 @@ int main(void)
                 lcd.Rect(7 * 8, 0, 127, REC_SUBSECTION_START - 1, ConvertColor(0), true);
                 lcd.Stall();
                 {
-                    char TunerFreq[8] = { 0 };
+                    char TunerFreq[LONG_DECIMAL_SIZE] = { 0 };
+                    char OffsetFreq[LONG_DECIMAL_SIZE] = { 0 };
+                    float freq = tuner.get_curr_freq();
+                    GuitarNotes note = NoteDetection(freq);
+                    float offset = NoteOffset(freq, note);
                     
-                    MakeDecimalLong(TunerFreq, tuner.get_curr_freq());
+                    MakeDecimalLong(TunerFreq, freq);
+                    MakeDecimalLong(OffsetFreq, offset, true);
                     lcd.String(TunerFreq, 9, 6, ConvertColor(0xFFFFFF));
+                    lcd.String(NoteToString(note), 9, 7, ConvertColor(0xFFFFFF));
+                    lcd.String(OffsetFreq, 11, 7, ConvertColor(0xFFFFFF));
                 }
                 break;
             case(BYPASS_PAGE):

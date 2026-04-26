@@ -12,6 +12,63 @@ constexpr size_t DELTA_HISTORY_TARGET = (DELTA_HISTORY_SIZE) / 2;
 
 constexpr float cutoff = 1e-3;
 
+const float NoteFreqs[6] = { 82.0f, 110.0f, 147.0f, 196.0f, 247.0f, 330.0f};
+
+const float NoteBounds[2][6] = { { 60.0f, 96.0f, 128.5f, 171.5f, 221.5f, 288.5f }, { 96.0f, 128.5f, 171.5f, 221.5f, 288.5f, 380.0f } };
+
+enum GuitarNotes {
+    E1,
+    A2,
+    D3,
+    G4,
+    B5,
+    E6,
+    NOTE_COUNT
+};
+
+const char * E1Str = "E1"; 
+const char * A2Str = "A2";
+const char * D3Str = "D3";
+const char * G4Str = "G4";
+const char * B5Str = "B5";
+const char * E6Str = "E6";
+
+const char * NoteToString(GuitarNotes note) {
+    switch (note) {
+        case(E1):
+        return E1Str;
+        case(A2):
+        return A2Str;
+        case(D3):
+        return D3Str;
+        case(G4):
+        return G4Str;
+        case(B5):
+        return B5Str;
+        default:
+        return E6Str;
+    }
+}
+
+GuitarNotes NoteDetection(float freq) {
+    for(size_t i = 0; i < NOTE_COUNT - 1; i++) {
+        if (freq < NoteBounds[1][i]) {
+            return (GuitarNotes)i;
+        }
+    }
+    return (GuitarNotes)(NOTE_COUNT - 1);
+}
+
+float NoteOffset(float freq, GuitarNotes note_e) {
+    size_t note = (size_t)note_e;
+    if (note > NOTE_COUNT - 1) {
+        note = NOTE_COUNT - 1;
+    }
+    const float base_freq = NoteFreqs[note];
+    float edge = (freq < base_freq) ? NoteBounds[1][note] : NoteBounds[2][note];
+    return (freq - base_freq);
+}
+
 template<size_t MAX_SAMPLES>
 class Tuner {
     size_t fs;
@@ -80,8 +137,12 @@ class Tuner {
     }
 
     inline void rolling_iterate(float delta) {
-        rolling_average = (1.0 - ROLLING_AVERAGE_RATIO) * rolling_average + ROLLING_AVERAGE_RATIO * delta;
+        //curr_freq = rolling_average;
+        rolling_average *= (1.0f - ROLLING_AVERAGE_RATIO); 
+        rolling_average += ROLLING_AVERAGE_RATIO * delta;
         curr_freq = fs/rolling_average;
+        //curr_freq = delta/10;
+        curr_freq = fs/delta;
     }
 
 
@@ -118,10 +179,11 @@ public:
             curr_max = 0;
             curr_min = 0;
         }
+        
 
         if (high_target < cutoff) {
             if (start_of_sector) {
-                rolling_iterate(0);
+                //rolling_iterate(96000);
                 start_of_sector = false;
             }
             // deal with history (required at the end of all return paths)
@@ -143,14 +205,14 @@ public:
                 if (delta > min_sample_gap) {
                     last_peak = h_i;
 
-                    delta = iterate_delta_history(delta);
+                    float delta2 = static_cast<float>(iterate_delta_history(delta));
 
-                    rolling_iterate(delta);
+                    rolling_iterate(delta2);
                 }
             }
         }
 
-        if (sample < low_target) {
+        if (s < low_target) {
             reached_low = true;
         }
         
