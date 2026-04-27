@@ -26,13 +26,13 @@ extern "C" {
 #define SPDT_IO_2               GPIOB, GTSR_GPIO_PIN_1
 
 #define EFFECT_SELECT_0         GPIOC, GTSR_GPIO_PIN_8
-#define EFFECT_SELECT_1         GPIOC, GTSR_GPIO_PIN_9
+#define EFFECT_SELECT_1         GPIOC, GTSR_GPIO_PIN_7
 
 #define LED_0                   GPIOB, GTSR_GPIO_PIN_14
 #define LED_1                   GPIOB, GTSR_GPIO_PIN_15
 #define LED_2                   GPIOC, GTSR_GPIO_PIN_6
 
-#define EFFECT_TOGGLE           GPIOC, GTSR_GPIO_PIN_7
+#define EFFECT_TOGGLE           GPIOC, GTSR_GPIO_PIN_9
 
 #define DEBOUNCE_LENGTH         32
 #define DEBOUND_DIV_FACTOR      5
@@ -62,6 +62,7 @@ static uint16_t adc5_raw_samples[2] = {0};
 #define UPDATE_ADC_TONE_POT     0
 #define UPDATE_ADC_GAIN_POT     1
 #define MAX_POT_VALUE           0xFF
+#define POT_DIFF_THRESHOLD      10
 
 /* =============================================== */
 /* ===================== SPI ===================== */
