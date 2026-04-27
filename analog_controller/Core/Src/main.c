@@ -23,6 +23,7 @@
 
 static void update_pot(pot_t* pot, uint8_t buf_select);
 static void update_toggle(debounce_t* button_toggle);
+static bool pot_diff(pot_t* pot);
 
 int main(void) {
     // Initialize System
@@ -98,7 +99,7 @@ int main(void) {
     gtsr_spi_initializer_t spi_init;
     spi_init.clock_frequency = SPI_CLOCK_FREQUENCY;
     spi_init.clock_phase = GTSR_SPI_SAMPLE_FIRST_EDGE;
-    spi_init.clock_polarity = GTSR_SPI_IDLE_HIGH;
+    spi_init.clock_polarity = GTSR_SPI_IDLE_LOW;
     spi_init.data_direction = GTSR_SPI_MSB_FIRST;
     spi_init.data_size = GTSR_SPI_16_BIT_DATA;
     spi_init.frame_format = GTSR_SPI_MOTOROLA;
@@ -299,9 +300,9 @@ int main(void) {
 
         // if effect is active, send value over SPI to effect board
         if(selected_effect->active && \
-            ((volume.value != volume.last_val) \
-            || (tone.value != tone.last_val) \
-            || (gain.value != gain.last_val) \
+            ((pot_diff(&volume)) \
+            || (pot_diff(&tone)) \
+            || (pot_diff(&gain)) \
             || newly_selected)) {
 
             // update spi peripheral matrix with pot values
@@ -310,13 +311,18 @@ int main(void) {
             spi_peripheral_data_matrix[selected_effect_num][GAIN] = (uint16_t) gain.value;
             spi_peripheral_data_matrix[selected_effect_num][VOLUME2] = (uint16_t) (MAX_POT_VALUE - (volume.value));
 
-            GTSR_PRINTF("volume value = %d\n", spi_peripheral_data_matrix[selected_effect_num][VOLUME]);
+            // GTSR_PRINTF("volume value = %d\n", spi_peripheral_data_matrix[selected_effect_num][VOLUME]);
 
             // send pot values to effect board
             gtsr_spi_transaction(&spi1, &(selected_effect->volume));
             gtsr_spi_transaction(&spi1, &(selected_effect->tone));
             gtsr_spi_transaction(&spi1, &(selected_effect->gain));
             gtsr_spi_transaction(&spi1, &(selected_effect->volume2));
+
+            // update last pot values
+            volume.last_val = volume.value;
+            tone.last_val = tone.value;
+            gain.last_val = gain.value;
 
             newly_selected = false;
             
@@ -344,7 +350,7 @@ void update_pot(pot_t* pot, uint8_t buf_select) {
     for(uint32_t i = 0; i < pot->num_samples_to_average; i++) {
         sum += pot->adc_arr[i];
     }
-    pot->last_val = pot->value;
+    // pot->last_val = pot->value;
     pot->value = (uint8_t)(sum>> ADC_DIV_FACTOR);
 }
 
@@ -361,4 +367,11 @@ inline void update_toggle(debounce_t* button_toggle) {
     }
     button_toggle->last_val = button_toggle->val;
     button_toggle->val = (uint8_t) (sum >> DEBOUND_DIV_FACTOR);
+}
+
+bool pot_diff(pot_t* pot) {
+    if((pot->value > (pot->last_val + POT_DIFF_THRESHOLD)) || (pot->value < (pot->last_val - POT_DIFF_THRESHOLD))) {
+        return true;
+    }
+    return false;
 }
