@@ -1,11 +1,9 @@
-# Blink
+# RecAmp Digital Board
 
 ## Author
 
-Shensley
+Andrew Carlisle
 
 ## Description
 
-Blinks the Seed's onboard LED at a constant rate.
-
-[Source Code](https://github.com/electro-smith/DaisyExamples/tree/master/seed/Blink)
+The code for the daisy seed used in the Custom Recording Guitar Amp

@@ -32,8 +32,8 @@ uLCD::Display lcd;
 #define LCD_UART UartHandler::Config::Peripheral::USART_1
 
     // DIGITAL OUTPUTS
+#define OUTPUT_PIN seed::D9
 #define BYPASS_PIN seed::D10
-#define OUTPUT_PIN seed::D11
 
     // JOYSTICK
 #define JOY_Y_PIN seed::A1
@@ -60,7 +60,7 @@ constexpr size_t HISTORY_LENGTH = 48000;
 
 
 // easy to adjust by just multiplying it
-constexpr size_t DROP_WINDOW = 7680;
+constexpr size_t DROP_WINDOW = 3840;
 // derived as HISTORY_LENGTH * DROP_WINDOW / gcf(HISTORY_LENGTH, DROP_WINDOW)
 // ensures smooth operation of drop with a non-multiple sized history
 constexpr size_t DROP_WRAPAROUND = HISTORY_LENGTH * DROP_WINDOW;
@@ -102,6 +102,8 @@ struct RecordingState {
     WavWriterT writer;
 };
 
+constexpr size_t RECORDING_DOWNSAMPLING = 2;
+
 #define GET_STORAGE_FILE_SYSTEM fsi.GetSDFileSystem()
 #define GET_STORAGE_PATH fsi.GetSDPath()
 #define FILE_FORMATTING "AmpRec_%04lu.wav" 
@@ -132,15 +134,15 @@ constexpr float drop_rho = 1.0;
 constexpr float drop_gamma = 0.5;
 constexpr float drop_S = DROP_WINDOW / 2.0;
 // constants for first part of cubic
-constexpr float drop_a = -3.5349e-11;
-constexpr float drop_b = 2.0366e-07;
-constexpr float drop_c = -4.0722e-07;
-constexpr float drop_d = 2.0359e-07;
+constexpr float drop_a = -2.8301e-10;
+constexpr float drop_b = 8.1550e-07;
+constexpr float drop_c = -1.6301e-06;
+constexpr float drop_d = 8.1493e-07;
 
 // constants for second part of cubic
-constexpr float drop_aa = 3.5321e-11;
-constexpr float drop_bb = -6.1035e-07;
-constexpr float drop_cc = 3.1250e-03;
+constexpr float drop_aa = 2.8257e-10;
+constexpr float drop_bb = -2.4414e-06;
+constexpr float drop_cc = 6.25e-03;
 constexpr float drop_dd = -4;
 
 
@@ -360,13 +362,13 @@ void AudioProcessingCallback(AudioHandle::InputBuffer in,
         }
 
         // send to WavWriter if recording
-        if (rec_state.is_recording && (curr_history_index % 4 == 0)) {
+        if (rec_state.is_recording && (curr_history_index % RECORDING_DOWNSAMPLING == 0)) {
             rec_state.writer.Sample(&sample);
         }
 
         // Set set output to processed signal
         out[0][i] = sample;
-        out[1][i] = 0;
+        out[1][i] = sample;
     }
 }
 
@@ -550,7 +552,7 @@ void render_recording_timer(RecordingState &state, uLCD::Display &lcd) {
 }
 
 void MakeDecimal(char* out, float num) {
-    int i = static_cast<int>(num * 100);
+    int i = static_cast<int>(round(num * 100));
     out[0] = '0' + ((i / 100) % 10);
     out[1] = '.';
     out[2] = '0' + ((i / 10) % 10);
@@ -565,7 +567,7 @@ void MakeDecimalLong(char* out, float num, bool show_pos=false) {
     if (num < -999.0f) {
         num = -999.0f;
     }
-    int32_t i = static_cast<int32_t>(num * 100);
+    int32_t i = static_cast<int32_t>(round(num * 100));
     out[0] = i < 0 ? '-' : (show_pos ? '+' : ' ');
     i = abs(i);
     out[1] = '0' + ((i / 10000) % 10);
@@ -580,13 +582,19 @@ void MakeDecimalLong(char* out, float num, bool show_pos=false) {
 const char* OnString = "On";
 const char* OffString = "Off";
 
+void PrintJoyStick(uLCD::Display &lcd, float X, float Y, bool sel) {
+    int16_t x = static_cast<int16_t>(round(X * 10));
+    int16_t y = static_cast<int16_t>(round(Y * 10));
+    lcd.Rect(59+x, y, 69+x, 10+y, sel ? ConvertColor(0x00FF00) : ConvertColor(0xFF0000), true);
+}
+
 int main(void)
 {
     char delay_str[6] = "X.XXs";
     char decay_str[5] = "X.XX";
 
     hw.Init();
-    sel_but.Init(JOY_SELECT_PIN, GPIO::Mode::INPUT, GPIO::Pull::NOPULL, GPIO::Speed::LOW);
+    sel_but.Init(JOY_SELECT_PIN, GPIO::Mode::INPUT, GPIO::Pull::PULLUP, GPIO::Speed::LOW);
     card_detect.Init(CARD_DETECT_PIN, GPIO::Mode::INPUT, GPIO::Pull::PULLUP, GPIO::Speed::LOW);
     bypass_switch.Init(BYPASS_PIN, GPIO::Mode::OUTPUT, GPIO::Pull::PULLDOWN, GPIO::Speed::LOW);
     output_switch.Init(OUTPUT_PIN, GPIO::Mode::OUTPUT, GPIO::Pull::PULLDOWN, GPIO::Speed::LOW);
@@ -605,28 +613,17 @@ int main(void)
 
     hw.SetAudioBlockSize(16);
 
-    Blink(1);
-    
     lcd.Init(&hw, LCD_TX_PIN, LCD_RX_PIN, LCD_UART, LCD_RST_PIN, BAUDS::OK);
 
-    lcd.Line(50, 50, 40, 80, ConvertColor(0xFFFFFF));
-    
-    lcd.Rect(10, 10, 40, 40, ConvertColor(0x444444), true);
-
     Blink(1);
 
-    lcd.IndString("indep text\nis cool!\0", 2, 3, ConvertColor(0xFFFFFF));
+    lcd.String( "Booting!", 2, 2, ConvertColor(0xFFFFFF));
 
     Blink(1);
-
-    lcd.String( "hello!", 2, 2, ConvertColor(0xFFFFFF));
-    
-    Blink(1);
-
     tuner.Init(static_cast<size_t>(hw.AudioSampleRate()));
     
     WavWriterT::Config wav_cfg = {
-        hw.AudioSampleRate() / 2, // we record at half speed due to drop existing
+        hw.AudioSampleRate() / RECORDING_DOWNSAMPLING, // we record at half speed due to drop existing
         WAV_CHANNELS,
         WAV_BITS_PER_SAMPLE,
     };
@@ -650,7 +647,7 @@ int main(void)
     hw.StartAudio(AudioProcessingCallback);
      
     // Enable Logging, and set up the USB connection.
-    hw.StartLog();
+    // hw.StartLog();
 
     // Initialize the SDMMC interface and FatFS drivers
     SdmmcHandler::Config sd_cfg;
@@ -676,13 +673,12 @@ int main(void)
     uint32_t ms = 0;
 
     std::string storage_path = GET_STORAGE_PATH;
-    hw.PrintLine("%s", storage_path.c_str());
 
     lcd.Clear();
 
     constexpr uint32_t interval = 1;
 
-    constexpr uint32_t display_interval = 50;
+    constexpr uint32_t display_interval = 100;
     
     constexpr uint32_t save_interval = 50;
     Debouncer sel_deb = Debouncer();
@@ -690,7 +686,7 @@ int main(void)
 
     bool prev_card = false;
 
-    uint16_t page = TUNER_PAGE;
+    uint16_t page = RECORD_PAGE;
     
     bool first_run = true;
 
@@ -819,6 +815,11 @@ int main(void)
             } else {
 
             }
+            //lcd.Rect(117, REC_SUBSECTION_START-5, 122, REC_SUBSECTION_START, dir == Directions::Down ? ConvertColor(0x00FF00) : ConvertColor(0xFF0000), true);
+            //lcd.Rect(117, REC_SUBSECTION_START-15, 122, REC_SUBSECTION_START-10, dir == Directions::Up ? ConvertColor(0x00FF00) : ConvertColor(0xFF0000), true);
+            //lcd.Rect(112, REC_SUBSECTION_START-10, 117, REC_SUBSECTION_START-5, dir == Directions::Left ? ConvertColor(0x00FF00) : ConvertColor(0xFF0000), true);
+            //lcd.Rect(122, REC_SUBSECTION_START-10, 127, REC_SUBSECTION_START-5, dir == Directions::Right ? ConvertColor(0x00FF00) : ConvertColor(0xFF0000), true);
+            //lcd.Rect(117, REC_SUBSECTION_START-10, 122, REC_SUBSECTION_START-5, sel ? ConvertColor(0x00FF00) : ConvertColor(0xFF0000), true);
         }
 
         tuner_enabled = page == TUNER_PAGE;
