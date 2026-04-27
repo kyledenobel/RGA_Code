@@ -1,4 +1,4 @@
-# Test
+# RecAmp Digital Board
 
 ## Author
 
@@ -6,6 +6,4 @@ Andrew Carlisle
 
 ## Description
 
-I am so awsome
-
-also the desmos : [https://www.desmos.com/calculator/ksephdecuk]
+The code for the daisy seed used in the Custom Recording Guitar Amp

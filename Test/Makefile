@@ -2,7 +2,7 @@
 TARGET = Test
 
 # Sources
-CPP_SOURCES = Test.cpp 
+CPP_SOURCES = uLCD.cpp Main.cpp  
 
 # Library Locations
 LIBDAISY_DIR = ../libDaisy

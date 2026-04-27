@@ -1,0 +1,989 @@
+#include "daisy_seed.h"
+#include "daisysp.h"
+#include <stdio.h>
+#include <string.h>
+#include "uLCD.h"
+#include "Inputs.h"
+#include "Tuner.h"
+
+using namespace daisy;
+using uLCD::ConvertColor;
+
+// Dumb macros
+#define f_unmount(path) f_mount(0, path, 0)
+
+
+// Globals
+
+SdmmcHandler sd;
+FatFSInterface fsi;
+FIL file;
+
+DaisySeed hw;
+uLCD::Display lcd;
+//USBHostHandle usb_host;
+
+// PIN DEFINITIONS
+
+    // UART (SCREEN)
+#define LCD_TX_PIN seed::D13
+#define LCD_RX_PIN seed::D14
+#define LCD_RST_PIN seed::D27
+#define LCD_UART UartHandler::Config::Peripheral::USART_1
+
+    // DIGITAL OUTPUTS
+#define OUTPUT_PIN seed::D9
+#define BYPASS_PIN seed::D10
+
+    // JOYSTICK
+#define JOY_Y_PIN seed::A1
+#define JOY_X_PIN seed::A0
+#define JOY_SELECT_PIN seed::D28
+
+    // SD CARD
+// NOTE : All Pins except Card Detect are hardcoded
+#define CARD_DETECT_PIN seed::D18
+
+
+constexpr size_t SAMPLE_RATE = 48000; // expected sample rate, not actual
+
+constexpr size_t DELAY_STEPS_PER_SEC = 20;
+constexpr size_t DELAY_STEP_SIZE = SAMPLE_RATE / DELAY_STEPS_PER_SEC;
+constexpr size_t DELAY_STEPS_DISABLED = 0;
+constexpr size_t DELAY_STEPS_MIN = 1;
+constexpr size_t DELAY_STEPS_MAX = 10;
+
+constexpr float DECAY_MIN = 4.0/32;
+constexpr float DECAY_MAX = 31.0/32;
+
+constexpr size_t HISTORY_LENGTH = 48000;
+
+
+// easy to adjust by just multiplying it
+constexpr size_t DROP_WINDOW = 3840;
+// derived as HISTORY_LENGTH * DROP_WINDOW / gcf(HISTORY_LENGTH, DROP_WINDOW)
+// ensures smooth operation of drop with a non-multiple sized history
+constexpr size_t DROP_WRAPAROUND = HISTORY_LENGTH * DROP_WINDOW;
+
+constexpr int32_t DROP_OFFSET_A = DROP_WINDOW;
+constexpr int32_t DROP_OFFSET_B = (DROP_WINDOW + DROP_WINDOW/2);
+
+constexpr char TERMINATOR_CHAR = '\0';
+
+enum Pages {
+    RECORD_PAGE = 0,
+    DELAY_PAGE,
+    DROP_PAGE,
+    TUNER_PAGE,
+    BYPASS_PAGE,
+    OUTPUT_PAGE,
+    PAGE_COUNT,
+};
+
+enum RecordingCode {
+    REC_OK,
+    REC_TOO_MANY, // Too many recording files already exist
+    REC_OUT_OF_SPACE, // Storage has run out of space
+    REC_NO_STORAGE, // No storage attached / mounted
+    REC_INVALID_ARGS, // Args to this function were invalid
+    REC_STORAGE_ERROR, // Some unknown storage error
+    REC_FILE_NOT_FOUND, // File doesn't exist
+    REC_IN_PROGRESS, // Recording already in progress
+};
+
+typedef WavWriter<32768/2> WavWriterT;
+typedef Tuner<SAMPLE_RATE/40> TunerT;
+
+struct RecordingState {
+    bool mounted = false;
+    bool is_recording = false;
+    bool lockout = false;
+    uint32_t current_index = 0;
+    WavWriterT writer;
+};
+
+constexpr size_t RECORDING_DOWNSAMPLING = 2;
+
+#define GET_STORAGE_FILE_SYSTEM fsi.GetSDFileSystem()
+#define GET_STORAGE_PATH fsi.GetSDPath()
+#define FILE_FORMATTING "AmpRec_%04lu.wav" 
+#define MAX_FILE_INDEX 9999
+#define WAV_CHANNELS 1
+#define WAV_BITS_PER_SAMPLE 16 // can only be 16 or 32 apparently
+#define MEDIA_TYPE FatFSInterface::Config::MEDIA_SD
+constexpr size_t FILE_NAME_SIZE = 64;
+
+float history[HISTORY_LENGTH] = {0};
+int32_t curr_history_index = 0;
+int32_t curr_drop_index = 0;
+
+bool delay_enabled = false;
+int delay_steps = 5;
+float delay_decay = 16.0/32;
+
+bool drop_enabled = false;
+
+bool tuner_enabled = false;
+
+bool bypass_enabled = false;
+
+bool output_enabled = false;
+
+// Drop cubic window math
+constexpr float drop_rho = 1.0;
+constexpr float drop_gamma = 0.5;
+constexpr float drop_S = DROP_WINDOW / 2.0;
+// constants for first part of cubic
+constexpr float drop_a = -2.8301e-10;
+constexpr float drop_b = 8.1550e-07;
+constexpr float drop_c = -1.6301e-06;
+constexpr float drop_d = 8.1493e-07;
+
+// constants for second part of cubic
+constexpr float drop_aa = 2.8257e-10;
+constexpr float drop_bb = -2.4414e-06;
+constexpr float drop_cc = 6.25e-03;
+constexpr float drop_dd = -4;
+
+
+RecordingState rec_state = RecordingState();
+
+TunerT tuner = TunerT();
+
+GPIO sel_but;
+GPIO card_detect;
+GPIO bypass_switch;
+GPIO output_switch;
+
+InputHandler input_handler;
+/// Checks if a file exists
+RecordingCode file_exists(const char* path) {
+    FIL f;
+
+    auto res = f_open(&f, path, FA_OPEN_EXISTING | FA_READ);
+    if (res == FR_NO_FILE)
+    {
+        // File isn't found (doesn't cover path failures)
+        f_close(&file);
+        return REC_FILE_NOT_FOUND;
+    }
+    if (res == FR_OK) {
+        // File is found
+        f_close(&file);
+        return REC_OK;
+    }
+    // Error occured
+    f_close(&file);
+    return REC_STORAGE_ERROR;
+}
+
+
+// each blink is ~0.2 seconds
+void Blink(size_t num) {
+    for (size_t i = 0; i < num; i++) {
+        hw.SetLed(true);
+        hw.DelayMs(100);
+        hw.SetLed(false);
+        hw.DelayMs(100);
+    }
+}
+
+/// Gets the next "index" (number appended to file name) that is not already taken. Expects out to not be a nullptr.
+/// Any return other than REC_OK means a file wasn't found, and the specific error code denotes why
+// Directory should end in a '/' already
+RecordingCode GetNextRecordingIndex(uint32_t & out, const std::string& directory, RecordingState &state) {
+    if (!state.mounted) {
+        return REC_NO_STORAGE;
+    }
+    char file_name[FILE_NAME_SIZE] = { TERMINATOR_CHAR };
+    // Get file base of string
+    std::string path;
+    path.assign(directory);
+    // We have a max recording index of 9999
+    for (uint32_t i = state.current_index; i <= MAX_FILE_INDEX; i++) {
+        // clear anything excess to "{path}/"
+        if (path.size() > directory.size()) {
+            path.erase(directory.size());
+        }
+        // Generate file name
+        snprintf(file_name, FILE_NAME_SIZE, FILE_FORMATTING, i);
+        path.append(file_name);
+        // Check if file exists
+        RecordingCode res = file_exists(path.c_str());
+        // If the file exists, just keep going
+        if (res == REC_OK) {
+            continue;
+        }
+        // If the file doesn't exist, we found our next recording slot
+        if (res == REC_FILE_NOT_FOUND) {
+            out = i;
+            return REC_OK;
+        }
+        // If there is an error, just forward it
+        return res;
+    }
+    return REC_TOO_MANY;
+}
+
+RecordingCode AttemptStartRecording(const std::string& directory, RecordingState &state) {
+    if (state.is_recording || state.lockout) {
+        return REC_IN_PROGRESS;
+    }
+    state.lockout = true;
+
+    uint32_t next_index = 0;
+    RecordingCode res = GetNextRecordingIndex(next_index, directory, state);
+    if (res != REC_OK) {
+        state.lockout = false;
+        return res;
+    }
+
+    // Generate final path
+    std::string path;
+    path.assign(directory);
+    char file_name[FILE_NAME_SIZE] = { TERMINATOR_CHAR };
+    snprintf(file_name, FILE_NAME_SIZE, FILE_FORMATTING, next_index);
+    path.append(file_name);
+
+    // Open up the writer
+    state.writer.OpenFile(path.c_str());
+    
+    // Set the current index etc
+    state.current_index = next_index;
+    
+    // Finally declare that we are recording
+    state.is_recording = true;
+
+    return REC_OK;
+}
+
+RecordingCode StopRecording(RecordingState &state) {
+    // if it's already not recording, yippee!
+    if (!state.is_recording) {
+        return REC_OK;
+    }
+    // immediately disable recording to prevent any problems potentially caused by interrupts
+    state.is_recording = false;
+
+    // Save the file
+    state.writer.SaveFile();
+
+    // increment index since we know the current was already used (faster search next time :3)
+    state.current_index += 1;
+
+    // disable recording lockout
+    state.lockout = false;
+
+    return REC_OK;
+}
+
+// These two functions I got from messing around in desmos, for now, very uncommented, sorry!
+inline int32_t DropSampleFunction(int32_t i, const int32_t d) {
+    int32_t a = ((i - d) % DROP_WINDOW) / 2;
+    int32_t b = (i - d) / DROP_WINDOW;
+    return a + b * DROP_WINDOW;
+}
+
+inline float DropRatioFunction(float k) {
+    k = k + 1; // put in line with matlab
+    float kk = k * k;
+    float kkk = kk * k;
+    if (k < drop_rho*drop_S) {
+        return drop_a * kkk + drop_b * kk + drop_c * k + drop_d;
+    } else if (k <= drop_S) {
+        return 1;
+    } else {
+        return drop_aa * kkk + drop_bb * kk + drop_cc * k + drop_dd;
+    }
+}
+inline float DropRatioFunctionOld(int32_t i) {
+    constexpr float cutoff_multiplier = 20;
+    i += DROP_WINDOW/2;
+    float res = (2 * (i % DROP_WINDOW) / DROP_WINDOW);
+    res = abs(res - 1.0) - 0.5;
+    res *= cutoff_multiplier;
+    if (res < -0.5) {
+        res = -0.5;
+    }
+    if (res > 0.5) {
+        res = 0.5;
+    }
+    res += 0.5;
+    return res;
+}
+
+// actual drop function
+inline float Drop(int32_t i) {
+    // stupid stretch hack (low pass filter will handle it)
+    if (i % 2 == 1)
+        return 0;
+
+    // get indices of drop sampling
+    int32_t i_a = DropSampleFunction(i, DROP_OFFSET_A);
+    int32_t i_b = DropSampleFunction(i, DROP_OFFSET_B);
+
+    float sample_a = history[(i_a + HISTORY_LENGTH) % HISTORY_LENGTH];
+    float sample_b = history[(i_b + HISTORY_LENGTH) % HISTORY_LENGTH];
+
+    float r = DropRatioFunction(i % DROP_WINDOW);
+
+    return sample_a * r + sample_b * (1.0 - r);
+}
+
+void AudioProcessingCallback(AudioHandle::InputBuffer in,
+                AudioHandle::OutputBuffer out,
+                size_t size)
+{
+    for (size_t i = 0; i < size; i++)
+    {
+        curr_history_index++;
+        curr_history_index %= HISTORY_LENGTH;
+        curr_drop_index++;
+        curr_drop_index %= DROP_WRAPAROUND;
+
+        // Sample input
+        float sample = in[0][i];
+
+        if (tuner_enabled) {
+            tuner.Sample(sample);
+        }
+
+        // Apply delay
+        if (delay_enabled) {
+            sample += history[(curr_history_index + HISTORY_LENGTH - (delay_steps * DELAY_STEP_SIZE)) % HISTORY_LENGTH] * delay_decay;
+        }
+        
+        // update history with processed signal
+        history[curr_history_index] = sample;
+        
+        // Apply drop
+        if (drop_enabled) {
+            sample = Drop(curr_drop_index);
+        }
+
+        // send to WavWriter if recording
+        if (rec_state.is_recording && (curr_history_index % RECORDING_DOWNSAMPLING == 0)) {
+            rec_state.writer.Sample(&sample);
+        }
+
+        // Set set output to processed signal
+        out[0][i] = sample;
+        out[1][i] = sample;
+    }
+}
+
+struct WriteReturnCode {
+    int stage;
+    int result;
+    WriteReturnCode(int s, int r) {
+        stage = s;
+        result = r;
+    }
+};
+
+WriteReturnCode write_test(const char* filename, uLCD::Display &lcd) {
+    // Initialize the SDMMC interface and FatFS drivers
+    FatFSInterface::Config fsi_cfg;
+    fsi_cfg.media = MEDIA_TYPE;
+    fsi.Init(fsi_cfg);
+    auto res = f_mount(& GET_STORAGE_FILE_SYSTEM,
+        GET_STORAGE_PATH,
+        0);
+    if (res != FR_OK)
+    {
+        char err_str[32] = "failed to mount";
+        lcd.String(err_str, 2, 3, ConvertColor(0xFFFFFF));
+        // If some error is encountered in mounting the card, then simply return.
+        return WriteReturnCode(0, res);
+    }
+    for (int i = 0; i < 100; i++) {
+        //usb_host.Process();
+    }
+
+    char file_path[512] = {0};
+    strcpy(file_path, GET_STORAGE_PATH);
+    strcat(file_path, filename);
+ 
+    // And Print Hello World!
+    //hw.PrintLine("%s", file_path);
+    //hw.PrintLine("here's the file path :3");
+    //hw.PrintLine("BAZINGA");
+    //hw.PrintLine("That's the file path :3");
+    res = f_open(&file, file_path, FA_CREATE_ALWAYS | FA_WRITE);
+    if (res != FR_OK)
+    {
+        char err_str[32] = "failed to open";
+        lcd.String(err_str, 2, 4, ConvertColor(0xFFFFFF));
+        // If some error is encountered in opening the file, then simply return.
+        f_close(&file);
+        return WriteReturnCode(1, res);
+    }
+
+
+    UINT bytes_written = 0;
+    constexpr size_t BUFFER_SIZE = 7;
+    char buffer[BUFFER_SIZE] = "hello!";
+    res = f_write(&file, buffer, BUFFER_SIZE, &bytes_written);
+    if (res != FR_OK)
+    {
+        char err_str[32] = "failed to write";
+        lcd.String(err_str, 2, 5, ConvertColor(0xFFFFFF));
+        // If some error is encountered in opening the file, then simply return.
+        f_close(&file);
+        return WriteReturnCode(2, res);
+    }
+    f_close(&file);
+
+    char suc_str[32] = "success!";
+    lcd.String(suc_str, 2, 6, ConvertColor(0xFFFFFF));
+    return WriteReturnCode(2, res);
+}
+//void write_test(const char* filename) {}
+
+void ActiveCallback(void *userdata) {}
+void ConnectCallback(void *data) {hw.SetLed(true);}
+void DisconnectCallback(void *data) {hw.SetLed(false);}
+void ErrorCallback(void *data) {}
+
+constexpr uint32_t UNMOUNTED_BACKGROUND = 0xffa28e;
+constexpr uint32_t MOUNTED_BACKGROUND = 0xFFFFFF;
+constexpr uint32_t SCROLL_BACKGROUND = 0x444444;
+constexpr uint32_t SCROLL_SELECTED = 0xFFFFFF;
+constexpr uint32_t SCROLL_UNSELECTED = 0xBBBBBB;
+
+constexpr uint8_t REC_SUBSECTION_START = 116;
+
+const char* REC_SCROLL_TEXT = "RECORD";
+const char* DELAY_SCROLL_TEXT = "DELAY";
+const char* DROP_SCROLL_TEXT = "DROP";
+const char* TUNE_SCROLL_TEXT = "TUNE";
+const char* BYPASS_SCROLL_TEXT = "BYPASS";
+const char* OUTPUT_SCROLL_TEXT = "OUTPUT";
+const char* UNKNOWN_TEXT = "UNKWN";
+
+const char* GetScrollText(uint16_t page) {
+    switch (page) {
+        case (RECORD_PAGE):
+        return REC_SCROLL_TEXT;
+        case (DELAY_PAGE):
+        return DELAY_SCROLL_TEXT;
+        case (DROP_PAGE):
+        return DROP_SCROLL_TEXT;
+        case (TUNER_PAGE):
+        return TUNE_SCROLL_TEXT;
+        case (BYPASS_PAGE):
+        return BYPASS_SCROLL_TEXT;
+        case (OUTPUT_PAGE):
+        return OUTPUT_SCROLL_TEXT;
+        default :
+        return UNKNOWN_TEXT;
+    }
+}
+
+void render_scroll_wheel(uint16_t page, uLCD::Display &lcd) {
+    // Clear out
+    lcd.Rect(0, 0, 7 * 8 - 1, REC_SUBSECTION_START - 1, ConvertColor(SCROLL_BACKGROUND), true);
+    // Set text background
+    lcd.SetTextBackground(ConvertColor(SCROLL_BACKGROUND));
+    lcd.Stall();
+
+    // Selected text
+    lcd.String(GetScrollText(page), 1, 6, ConvertColor(SCROLL_SELECTED));
+    // Unselected stuff
+    lcd.String(GetScrollText((page + (PAGE_COUNT - 1)) % PAGE_COUNT), 1, 9, ConvertColor(SCROLL_UNSELECTED));
+    lcd.String(GetScrollText((page + 1) % PAGE_COUNT), 1, 3, ConvertColor(SCROLL_UNSELECTED));
+
+    lcd.SetTextBackground(0); // Set back to black
+}
+
+void render_recording_subsection(RecordingState &state, uLCD::Display &lcd) {
+    // Red background if unmounted, normal background if mounted
+    uint16_t bkg = state.mounted ? ConvertColor(MOUNTED_BACKGROUND) : ConvertColor(UNMOUNTED_BACKGROUND);
+    lcd.SetTextBackground(bkg); // Set background
+
+    // Clear it
+    lcd.Rect(0, REC_SUBSECTION_START, 127, 127, bkg, true);
+    lcd.Stall();
+    
+    // Status
+    if (state.mounted) {
+        lcd.String(state.is_recording ? "RECORDING" :"WAITING", 0, 15, ConvertColor(0x000000));
+    } else {
+        lcd.String("NO_STRG", 0, 15, ConvertColor(0x000000));
+    }
+
+    lcd.SetTextBackground(0); // Reset bkg to black
+}
+
+void render_recording_timer(RecordingState &state, uLCD::Display &lcd) {
+    // only bother if it is mounted
+    if (!state.mounted) {
+        return;
+    }
+
+
+    float time = state.writer.GetLengthSeconds();
+
+    uint32_t time_centisec = static_cast<int>(time * 10);  // centiseconds
+    // implicit maximum
+    if (time_centisec > 600 * 99 - 1) {
+        time_centisec = 600 * 99 - 1;
+    }
+    uint32_t time_min = time_centisec / 600;
+    time_centisec = time_centisec % 600;
+
+    char time_str[8] = "00:00.0";
+    time_str[6] = '0' + (time_centisec % 10);
+    time_centisec /= 10;
+    time_str[4] = '0' + (time_centisec % 10);
+    time_centisec /= 10;
+    time_str[3] = '0' + (time_centisec % 10);
+
+    time_str[1] = '0' + (time_min % 10);
+    time_str[0] = '0' + ((time_min / 10) % 10);
+
+    // Red background if unmounted, normal background if mounted
+    uint16_t bkg = ConvertColor(MOUNTED_BACKGROUND);
+    lcd.SetTextBackground(bkg); // Set background
+
+    lcd.String(time_str, 11, 15, 0x000000);
+    
+    lcd.SetTextBackground(0); // Reset bkg to black
+}
+
+void MakeDecimal(char* out, float num) {
+    int i = static_cast<int>(round(num * 100));
+    out[0] = '0' + ((i / 100) % 10);
+    out[1] = '.';
+    out[2] = '0' + ((i / 10) % 10);
+    out[3] = '0' + (i % 10);
+}
+
+constexpr size_t LONG_DECIMAL_SIZE = 9;
+void MakeDecimalLong(char* out, float num, bool show_pos=false) {
+    if (num > 999.0f) {
+        num = 999.0f;
+    }
+    if (num < -999.0f) {
+        num = -999.0f;
+    }
+    int32_t i = static_cast<int32_t>(round(num * 100));
+    out[0] = i < 0 ? '-' : (show_pos ? '+' : ' ');
+    i = abs(i);
+    out[1] = '0' + ((i / 10000) % 10);
+    out[2] = '0' + ((i / 1000) % 10);
+    out[3] = '0' + ((i / 100) % 10);
+    out[4] = '.';
+    out[5] = '0' + ((i / 10) % 10);
+    out[6] = '0' + (i % 10);
+    out[7] = TERMINATOR_CHAR;
+}
+
+const char* OnString = "On";
+const char* OffString = "Off";
+
+void PrintJoyStick(uLCD::Display &lcd, float X, float Y, bool sel) {
+    int16_t x = static_cast<int16_t>(round(X * 10));
+    int16_t y = static_cast<int16_t>(round(Y * 10));
+    lcd.Rect(59+x, y, 69+x, 10+y, sel ? ConvertColor(0x00FF00) : ConvertColor(0xFF0000), true);
+}
+
+int main(void)
+{
+    char delay_str[6] = "X.XXs";
+    char decay_str[5] = "X.XX";
+
+    hw.Init();
+    sel_but.Init(JOY_SELECT_PIN, GPIO::Mode::INPUT, GPIO::Pull::PULLUP, GPIO::Speed::LOW);
+    card_detect.Init(CARD_DETECT_PIN, GPIO::Mode::INPUT, GPIO::Pull::PULLUP, GPIO::Speed::LOW);
+    bypass_switch.Init(BYPASS_PIN, GPIO::Mode::OUTPUT, GPIO::Pull::PULLDOWN, GPIO::Speed::LOW);
+    output_switch.Init(OUTPUT_PIN, GPIO::Mode::OUTPUT, GPIO::Pull::PULLDOWN, GPIO::Speed::LOW);
+
+    
+    // Create an ADC Channel Config object
+    AdcChannelConfig adc_config[2];
+
+    // Set up the ADC config with a connection to pin A0
+    adc_config[0].InitSingle(JOY_X_PIN); // X Joy
+    adc_config[1].InitSingle(JOY_Y_PIN); // Y Joy
+
+    // Initialize the ADC peripheral with that configuration
+    hw.adc.Init(adc_config, 2);
+    hw.adc.Start();
+
+    hw.SetAudioBlockSize(16);
+
+    lcd.Init(&hw, LCD_TX_PIN, LCD_RX_PIN, LCD_UART, LCD_RST_PIN, BAUDS::OK);
+
+    Blink(1);
+
+    lcd.String( "Booting!", 2, 2, ConvertColor(0xFFFFFF));
+
+    Blink(1);
+    tuner.Init(static_cast<size_t>(hw.AudioSampleRate()));
+    
+    WavWriterT::Config wav_cfg = {
+        hw.AudioSampleRate() / RECORDING_DOWNSAMPLING, // we record at half speed due to drop existing
+        WAV_CHANNELS,
+        WAV_BITS_PER_SAMPLE,
+    };
+    rec_state.writer.Init(wav_cfg);
+    
+    // Initializing usb stuff
+    //hw.usb_handle.Init(UsbHandle::FS_EXTERNAL);
+    /*USBHostHandle::Config usb_host_cfg = USBHostHandle::Config();
+    usb_host_cfg.class_active_callback = ActiveCallback;
+    usb_host_cfg.connect_callback = ConnectCallback;
+    usb_host_cfg.disconnect_callback = DisconnectCallback;
+    usb_host_cfg.error_callback = ErrorCallback;
+    usb_host.Init(usb_host_cfg);
+    for (size_t i = 0; i < HISTORY_LENGTH; i++) {
+        history[i] = 0.0;
+    }
+    for (int i = 0; i < 1; i++) {
+        usb_host.Process();
+    } */
+    //hw.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_96KHZ);
+    hw.StartAudio(AudioProcessingCallback);
+     
+    // Enable Logging, and set up the USB connection.
+    // hw.StartLog();
+
+    // Initialize the SDMMC interface and FatFS drivers
+    SdmmcHandler::Config sd_cfg;
+    sd_cfg.Defaults();
+    sd_cfg.clock_powersave = false;
+	sd_cfg.width = SdmmcHandler::BusWidth::BITS_1;
+    sd_cfg.speed = daisy::SdmmcHandler::Speed::STANDARD;
+    auto sd_res = sd.Init(sd_cfg);
+    if (sd_res == SdmmcHandler::Result::ERROR)
+        return -1;
+    FatFSInterface::Config fsi_cfg;
+    fsi_cfg.media = MEDIA_TYPE;
+    //auto res = f_mount(& GET_STORAGE_FILE_SYSTEM,
+    //    GET_STORAGE_PATH,
+    //    1);
+    // Communicate results
+    //rec_state.mounted = (res == FR_OK);
+
+    //char * name = "test.txt";
+    //WriteReturnCode out = write_test(name, lcd);
+    //return 0;
+    //hw.PrintLine("%d : CODE(%d)", out.stage, out.result);
+    uint32_t ms = 0;
+
+    std::string storage_path = GET_STORAGE_PATH;
+
+    lcd.Clear();
+
+    constexpr uint32_t interval = 1;
+
+    constexpr uint32_t display_interval = 100;
+    
+    constexpr uint32_t save_interval = 50;
+    Debouncer sel_deb = Debouncer();
+    Debouncer card_deb = Debouncer();
+
+    bool prev_card = false;
+
+    uint16_t page = RECORD_PAGE;
+    
+    bool first_run = true;
+
+    uint16_t subpage = 0;
+
+    while(1) {
+        // Inputs
+        sel_deb.next(!sel_but.Read());
+        card_deb.next(card_detect.Read());
+        bool sel = sel_deb.state;
+        bool card_in = card_deb.state; 
+        bool rerender_scroll = false;
+        bool rerender_page = false;
+        float x = hw.adc.GetFloat(0);
+        float y = hw.adc.GetFloat(1);
+        Directions::Directions dir = Directions::Center;
+        if (x > 0.9) {
+            dir = Directions::Right;
+        } else if (x < 0.1) {
+            dir = Directions::Left;
+        } else if (y > 0.9) {
+            dir = Directions::Up;
+        } else if (y < 0.1) {
+            dir = Directions::Down;
+        }
+
+        if (first_run) {
+            rerender_scroll = true;
+            first_run = false;
+            render_recording_subsection(rec_state, lcd);
+        }
+
+        InputInstance pressed = input_handler.next_tick({dir, sel});
+
+        // handle page switching
+        switch (pressed.dir) {
+        case (Directions::Up) :
+            page = (page + 1) % PAGE_COUNT;
+            rerender_scroll = true;
+            subpage = 0;
+            break;
+        case (Directions::Down) :
+            page = (page + (PAGE_COUNT - 1)) % PAGE_COUNT;
+            rerender_scroll = true;
+            subpage = 0;
+            break;
+        default :
+            break;
+        }
+
+        // we need to render the main UI
+        if (rerender_scroll) {
+            render_scroll_wheel(page, lcd);
+            rerender_page = true;
+        }
+        
+
+        // card insertion and detection
+        if (card_in != prev_card) {
+            if (card_in) { // Card inserted
+                hw.DelayMs(500);
+                if (!rec_state.mounted) {
+                    fsi.Init(fsi_cfg);
+                    // mount it
+                    rec_state.mounted = f_mount(& GET_STORAGE_FILE_SYSTEM,
+                        GET_STORAGE_PATH,
+                        1) == FR_OK;
+                }
+
+            } else { // Card ejected
+
+                // if recording, stop (not like we can save anyways but still)
+                if (rec_state.is_recording) {
+                    StopRecording(rec_state);
+                }
+
+                // unmount
+                f_unmount(GET_STORAGE_PATH);
+                rec_state.mounted = false;
+                fsi.DeInit();
+            }
+            render_recording_subsection(rec_state, lcd);
+        }
+        prev_card = card_in;
+
+        // Actually handle stuff
+        // Recording
+        if (rec_state.mounted) {
+            // if they press in, either stop or start recording (Input Handling)
+            if (pressed.sel && page == RECORD_PAGE) {
+                rerender_page = true;
+                if (rec_state.is_recording) {
+                    StopRecording(rec_state);
+                    render_recording_subsection(rec_state, lcd);
+                    hw.SetLed(false);
+                } else {
+                    auto res = AttemptStartRecording(storage_path, rec_state);
+                    render_recording_subsection(rec_state, lcd);
+                    if (res == REC_OK) {
+                        hw.SetLed(true);
+                        render_recording_timer(rec_state, lcd);
+                        hw.DelayMs(5);
+                    } else {
+                        hw.SetLed(false);
+                        hw.DelayMs(5);
+                    };
+                }
+            }
+        }
+        // The actual recording timer
+        if ((ms % (interval*display_interval)) == 0) {
+            if (rec_state.is_recording) {
+                render_recording_timer(rec_state, lcd);
+            } else if (page == TUNER_PAGE) {
+                    char TunerFreq[LONG_DECIMAL_SIZE] = { 0 };
+                    char OffsetFreq[LONG_DECIMAL_SIZE] = { 0 };
+                    float freq = tuner.get_curr_freq();
+                    GuitarNotes note = NoteDetection(freq);
+                    float offset = NoteOffset(freq, note);
+                    
+                    MakeDecimalLong(TunerFreq, freq);
+                    MakeDecimalLong(OffsetFreq, offset, true);
+                    lcd.String(TunerFreq, 9, 6, ConvertColor(0xFFFFFF));
+                    lcd.String(NoteToString(note), 9, 7, ConvertColor(0xFFFFFF));
+                    lcd.String(OffsetFreq, 11, 7, ConvertColor(0xFFFFFF));
+            } else {
+
+            }
+            //lcd.Rect(117, REC_SUBSECTION_START-5, 122, REC_SUBSECTION_START, dir == Directions::Down ? ConvertColor(0x00FF00) : ConvertColor(0xFF0000), true);
+            //lcd.Rect(117, REC_SUBSECTION_START-15, 122, REC_SUBSECTION_START-10, dir == Directions::Up ? ConvertColor(0x00FF00) : ConvertColor(0xFF0000), true);
+            //lcd.Rect(112, REC_SUBSECTION_START-10, 117, REC_SUBSECTION_START-5, dir == Directions::Left ? ConvertColor(0x00FF00) : ConvertColor(0xFF0000), true);
+            //lcd.Rect(122, REC_SUBSECTION_START-10, 127, REC_SUBSECTION_START-5, dir == Directions::Right ? ConvertColor(0x00FF00) : ConvertColor(0xFF0000), true);
+            //lcd.Rect(117, REC_SUBSECTION_START-10, 122, REC_SUBSECTION_START-5, sel ? ConvertColor(0x00FF00) : ConvertColor(0xFF0000), true);
+        }
+
+        tuner_enabled = page == TUNER_PAGE;
+
+        if (page == DELAY_PAGE) {
+            if (pressed.sel) {
+                subpage = (subpage + 1) % 3;
+                rerender_page = true;
+            } else {
+                switch (subpage) {
+                    case(0) :
+                    if (pressed.dir == Directions::Right || pressed.dir == Directions::Left) {
+                        delay_enabled = !delay_enabled;
+                        rerender_page = true;
+                    }
+                    break;
+                    case(1) :
+                    if (pressed.dir == Directions::Right) {
+                        delay_steps += 1;
+                        if (delay_steps > DELAY_STEPS_MAX) {
+                            delay_steps = DELAY_STEPS_MAX;
+                        }
+                        rerender_page = true;
+                    } else if (pressed.dir == Directions::Left) {
+                        delay_steps -= 1;
+                        if (delay_steps < DELAY_STEPS_MIN) {
+                            delay_steps = DELAY_STEPS_MIN;
+                        }
+                        rerender_page = true;
+                    }
+                    break;
+                    case(2) :
+                    if (pressed.dir == Directions::Right) {
+                        delay_decay += (1.0/32);
+                        if (delay_decay > DECAY_MAX) {
+                            delay_decay = DECAY_MAX;
+                        }
+                        rerender_page = true;
+                    } else if (pressed.dir == Directions::Left) {
+                        delay_decay -= (1.0/32);
+                        if (delay_decay < DECAY_MIN) {
+                            delay_decay = DECAY_MIN;
+                        }
+                        rerender_page = true;
+                    }
+                    break;
+                    default:
+                    break;
+                }
+                if (pressed.dir == Directions::Right) {
+                    
+                }
+            }
+        } else if (page == DROP_PAGE) {
+            if (pressed.sel) {
+                drop_enabled = !drop_enabled;
+                rerender_page = true;
+            }
+        } else if (page == BYPASS_PAGE) {
+            if (pressed.sel) {
+                bypass_enabled = !bypass_enabled;
+                rerender_page = true;
+                bypass_switch.Write(bypass_enabled);
+            }
+        } else if (page == OUTPUT_PAGE) {
+            if (pressed.sel) {
+                output_enabled = !output_enabled;
+                rerender_page = true;
+                output_switch.Write(output_enabled);
+            }
+        }
+
+        if (rerender_page) {
+            switch (page) {
+            case(DELAY_PAGE):
+                MakeDecimal(delay_str, float(delay_steps) / DELAY_STEPS_PER_SEC);
+                MakeDecimal(decay_str, delay_decay);
+                lcd.Rect(7 * 8, 0, 127, REC_SUBSECTION_START - 1, ConvertColor(0), true);
+                lcd.Stall();
+                lcd.String("Enabled", 8, 2, ConvertColor(0xFFFFFF));
+                lcd.String(delay_enabled ? OnString : OffString, 9, 3, ConvertColor(0xBBBBBB));
+                {
+                    lcd.String("Delay", 8, 5, ConvertColor(0xFFFFFF));
+                    lcd.String(delay_str, 9, 6, ConvertColor(0xBBBBBB));\
+                }
+                {
+                    lcd.String("Decay", 8, 8, ConvertColor(0xFFFFFF));
+                    lcd.String(decay_str, 9, 9, ConvertColor(0xBBBBBB));
+                }
+                // Selection
+                lcd.Char('<', 8, 3 + (subpage*3), ConvertColor(0xFFFFFF));
+                {
+                    const char * bruh[3] = { delay_enabled ? OnString : OffString, delay_str, decay_str };
+                    int32_t offset = strlen(bruh[subpage]);
+                    
+                    lcd.Char('>', 9+offset, 3 + (subpage*3), ConvertColor(0xFFFFFF));
+
+                }
+                break;
+            case(DROP_PAGE):
+                lcd.Rect(7 * 8, 0, 127, REC_SUBSECTION_START - 1, ConvertColor(0), true);
+                lcd.Stall();
+                lcd.String(drop_enabled ? OnString : OffString, 9, 6, drop_enabled ? ConvertColor(0xFFFFFF) : ConvertColor(0xBBBBBB));
+                break;
+            case(RECORD_PAGE):
+                lcd.Rect(7 * 8, 0, 127, REC_SUBSECTION_START - 1, ConvertColor(0), true);
+                lcd.Stall();
+                {
+                    char rec_str[10] = "Recording";
+                    char not_str[14] = "Not\nRecording";
+                    lcd.String(rec_state.is_recording ? rec_str : not_str, 9, 6, rec_state.is_recording ? ConvertColor(0xFFFFFF) : ConvertColor(0xBBBBBB));
+                }
+                break;
+            case(TUNER_PAGE):
+                lcd.Rect(7 * 8, 0, 127, REC_SUBSECTION_START - 1, ConvertColor(0), true);
+                lcd.Stall();
+                {
+                    char TunerFreq[LONG_DECIMAL_SIZE] = { 0 };
+                    char OffsetFreq[LONG_DECIMAL_SIZE] = { 0 };
+                    float freq = tuner.get_curr_freq();
+                    GuitarNotes note = NoteDetection(freq);
+                    float offset = NoteOffset(freq, note);
+                    
+                    MakeDecimalLong(TunerFreq, freq);
+                    MakeDecimalLong(OffsetFreq, offset, true);
+                    lcd.String(TunerFreq, 9, 6, ConvertColor(0xFFFFFF));
+                    lcd.String(NoteToString(note), 9, 7, ConvertColor(0xFFFFFF));
+                    lcd.String(OffsetFreq, 11, 7, ConvertColor(0xFFFFFF));
+                }
+                break;
+            case(BYPASS_PAGE):
+                lcd.Rect(7 * 8, 0, 127, REC_SUBSECTION_START - 1, ConvertColor(0), true);
+                lcd.Stall();
+                {
+                    char on_str[10] = "Bypassing";
+                    char off_str[9] = "Disabled";
+                    lcd.String(bypass_enabled ? on_str : off_str, 9, 6, bypass_enabled ? ConvertColor(0xFFFFFF) : ConvertColor(0xBBBBBB));
+                }
+                break;
+            case(OUTPUT_PAGE):
+                lcd.Rect(7 * 8, 0, 127, REC_SUBSECTION_START - 1, ConvertColor(0), true);
+                lcd.Stall();
+                {
+                    char on_str[11] = "Headphones";
+                    char off_str[8] = "Speaker";
+                    lcd.String(output_enabled ? on_str : off_str, 9, 6, output_enabled ? ConvertColor(0xFFFFFF) : ConvertColor(0xBBBBBB));
+                }
+                break;
+            default :
+                lcd.Rect(7 * 8, 0, 127, REC_SUBSECTION_START - 1, ConvertColor(0), true);
+                break;
+            }
+        }
+        
+
+        if (ms % save_interval == 0) {
+            rec_state.writer.Write();
+        }
+
+        hw.DelayMs(interval);
+        ms = ms + interval;
+        if (ms > (1 << 30)) {
+            ms = 1;
+        }
+    }
+
+}
