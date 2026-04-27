@@ -1,10 +1,21 @@
 StringFreq = [82, 110, 147, 196, 247, 330];
 
+% Get cutoff thresholds for each one
+NoteCutoffs = movmean(StringFreq, 2);
+NoteCutoffs = NoteCutoffs(2:end); % who needs the first
+NoteBounds = zeros(2, length(StringFreq));
+NoteBounds(1, 2:end) = NoteCutoffs;
+NoteBounds(2, 1:end-1) = NoteCutoffs;
+NoteBounds(1, 1) = 60;
+NoteBounds(2, end) = 380;
+
 target_relative_amp = 0.9;
 low_relative_amp = 0.2;
 cutoff = 5e-3;
 
-[x, fs] = audioread("AcousticGuitar.wav");
+[x, fs] = audioread("ElectricNotNoisy.wav");
+%x = x(1:2:end);
+%fs = fs/2;
 
 max_freq = 600;
 min_sample_gap = floor(fs/max_freq);
@@ -33,7 +44,7 @@ dw_size = 5;
 dw_cutoff = 2;
 
 rolling_av = 0;
-rolling_m = 0.3;
+rolling_m = 0.4;
 
 for i = 1:N
     h_i = mod(i-1, max_window) + 1;
@@ -110,12 +121,15 @@ hold on
 freq = wavelengths(2, :);
 freq(freq > 400) = 0;
 freq(freq < 20) = 0;
+plot(wavelengths(4, :)/fs, freq, DisplayName="Frequency Detected")
+xlabel("Time")
+ylabel("Frequency / Signal")
+
+%freq = wavelengths(3, :);
+%freq(freq > 400) = 0;
+%freq(freq < 20) = 0;
 %plot(wavelengths(4, :)/fs, freq)
-freq = wavelengths(3, :);
-freq(freq > 400) = 0;
-freq(freq < 20) = 0;
-plot(wavelengths(4, :)/fs, freq)
 
 x = x(slice);
-plot(slice/fs, 100*(x))
+plot(slice/fs, 100*(x), DisplayName="Audio Signal")
 
