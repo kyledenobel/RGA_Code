@@ -223,8 +223,8 @@ int main(void) {
     }
 
     // pots
-    volume.adc = &adc3;
-    tone.adc = &adc5;
+    volume.adc = &adc5;
+    tone.adc = &adc3;
     gain.adc = &adc5;
 
     volume.num_samples_to_average = NUM_ADC_SAMPLES;
@@ -328,10 +328,6 @@ int main(void) {
             
         }
         GTSR_PRINTF("Effect = %d | Effect Status = %d | Volume %d | Tone %d | Gain %d\n", selected_effect_num, selected_effect->active, volume.value, tone.value, gain.value);
-        // GTSR_PRINTF("Volume %d | Tone %d | Gain %d\n", gpio_read_pin(GPIOB, GTSR_GPIO_PIN_13), gpio_read_pin(GPIOA, GTSR_GPIO_PIN_8), gpio_read_pin(GPIOA, GTSR_GPIO_PIN_9));
-        // GTSR_PRINTF("Effect = %d | Effect status = %d\n", selected_effect_num, selected_effect->active);
-
-        // HAL_Delay(200);
 
     }
 
